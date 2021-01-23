@@ -48,12 +48,9 @@ uint8_t LookupTable::trim(uint8_t value)
 
 void LookupTable::init_attacks()
 {
-    for (uint16_t i = 0; i != (UINT8_MAX + 1); i++)
-    //uint16_t i = 0b001001000;
+    for (uint16_t i = 0; i != 64; i++)
     {
-        Line line((uint8_t)i);
-        /*std::cout << "zustand: " << std::endl
-                  << line << std::endl;*/
+        Line line(i);
 
         for (uint8_t position = 0; position < 8; position++)
         {
@@ -63,7 +60,7 @@ void LookupTable::init_attacks()
                 uint8_t currpos = position - 1;
                 while (currpos != 255)
                 {
-                    if (line.is_set(currpos))
+                    if (line.is_set(currpos-1))
                     {
                         attack.set(currpos);
                         break;
@@ -78,7 +75,7 @@ void LookupTable::init_attacks()
                 uint8_t currpos = position + 1;
                 while (currpos != 8)
                 {
-                    if (line.is_set(currpos))
+                    if (line.is_set(currpos-1))
                     {
                         attack.set(currpos);
                         break;
@@ -88,13 +85,12 @@ void LookupTable::init_attacks()
                 }
             }
             
-            attacks[position][trim(line.get_raw())] = attack;
-            /*std::cout << "attacks: " << std::endl
-                      << attack << std::endl;*/
+            attacks[position][line.get_raw()] = attack;
         }
     }
 }
 
 void LookupTable::init_diag_attacks()
 {
+
 }
