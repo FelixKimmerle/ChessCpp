@@ -37,6 +37,7 @@ public:
     bool is_zero() const;
     bool more_than_one() const;
     bool is_set(Location location) const;
+    void set(Location location);
     Line get_line(uint8_t index) const;
     Line get_diagonal(uint8_t index) const;
     Line get_anti_diagonal(uint8_t index) const;

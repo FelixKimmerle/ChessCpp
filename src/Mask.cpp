@@ -2,6 +2,7 @@
 #include "ConsoleColor.hpp"
 #include <cassert>
 #include <cmath>
+#include "Definitions.hpp"
 
 Mask::Mask(uint64_t mask) : mask(mask)
 {
@@ -84,39 +85,30 @@ bool Mask::is_set(Location location) const
     return (mask >> location.get_number()) & uint8_t(1);
 }
 
+void Mask::set(Location location)
+{
+    mask |= (1ull << location.get_number());
+}
+
 Line Mask::get_line(uint8_t index) const
 {
     assert(index < 8);
     return (mask >> (index << 3)) & UINT8_MAX;
 }
 #include <iostream>
+
 Line Mask::get_diagonal(uint8_t index) const
 {
     assert(index < 15);
-    uint8_t offset = ((index + 1) % 8);
-
-    Line line = get_line(offset);
-    uint8_t shift = ((index - 7) * (index > 7));
-    Line linemask(UINT8_MAX << shift);
-    linemask >>= ((7 - index) * (index <= 7));
-    return (line & linemask) >> shift;
+    Line line = get_line(OffsetTable[index + 1]);
+    return (line & MaskTable[index]) >> ShiftTable[index];
 }
 
 Line Mask::get_anti_diagonal(uint8_t index) const
 {
     assert(index < 15);
-    uint8_t offset = ((index + 1) % 8);
-    //std::cout << "Offset: " <<  (int)offset << std::endl;
-
-    Line line = get_line(offset);
-    uint8_t shift = ((7 - index) * (index <= 7));
-    Line linemask(UINT8_MAX << shift);
-    linemask >>= ((index - 7) * (index > 7));
-    //std::cout << "Mask: " << std::endl << linemask << std::endl;
-    //std::cout << "Line: " << std::endl << line << std::endl;
-    //std::cout << "Result: " << std::endl;
-    //return (line & linemask) >> shift;
-    return (line & linemask) >> shift;
+    Line line = get_line(OffsetTable[index + 1]);
+    return (line & MaskTable[14 - index]) >> ShiftTable[14 - index];
 }
 
 Location Mask::get_next_location()

@@ -29,6 +29,7 @@ public:
     Line operator>>=(const Line &other);
     Line operator<<(const Line &other)const;
     Line operator<<=(const Line &other);
+    Line reverse()const;
     friend std::ostream &operator<<(std::ostream &os, const Line &line);
 
 };

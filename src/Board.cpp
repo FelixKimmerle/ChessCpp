@@ -11,9 +11,9 @@ Board::Board(/* args */)
     pieces[COLOR_WHITE][PAWN_BITBOARD_POSITION] = 0;
     pieces[COLOR_BLACK][PAWN_BITBOARD_POSITION] = 0;
 
-    pieces[COLOR_WHITE][ROOK_BITBOARD_POSITION] = 0x100014000000;
+    pieces[COLOR_WHITE][ROOK_BITBOARD_POSITION] = 0x81;
     pieces[COLOR_WHITE][KNIGHT_BITBOARD_POSITION] = 0x42;
-    pieces[COLOR_WHITE][BISHOP_BITBOARD_POSITION] = 0x24;
+    pieces[COLOR_WHITE][BISHOP_BITBOARD_POSITION] = 0x40224;
     pieces[COLOR_WHITE][QUEEN_BITBOARD_POSITION] = 0x10;
     pieces[COLOR_WHITE][KING_BITBOARD_POSITION] = 0x8;
     //pieces[COLOR_WHITE][ALL_BITBOARD_POSITION] = 0xff;
@@ -44,8 +44,19 @@ Board::Board(/* args */)
     Mask occupied = pieces[COLOR_BLACK][ALL_BITBOARD_POSITION] | pieces[COLOR_WHITE][ALL_BITBOARD_POSITION];
     Mask rotated_occupied = occupied.rotate_right_90();
 
-    Mask moves = table.get_rook_attack(occupied, rotated_occupied, pieces[COLOR_WHITE][ALL_BITBOARD_POSITION], Location(4, 3));
-    std::cout << moves << std::endl;
+    Mask rotated_left = occupied.rotate_left_45();
+    Mask rotated_right = occupied.rotate_right_45();
+
+    //uint8_t y = 3;
+    //for (uint8_t y = 0; y < 8; y++)
+    {
+        for (uint8_t x = 0; x < 8; x++)
+        {
+            std::cout << Location(7-x, x) << std::endl << std::endl;
+            Mask moves = table.get_bishop_attack(rotated_left, rotated_right, pieces[COLOR_WHITE][ALL_BITBOARD_POSITION], Location(7-x, x));
+            std::cout << moves << std::endl;
+        }
+    }
 
     possible_plies.reserve(32);
 }

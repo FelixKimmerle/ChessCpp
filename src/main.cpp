@@ -10,15 +10,22 @@ int main()
     //std::cout << board << std::endl;
     //std::cout << Mask((CENTER_BIG.get_raw() | LONG_DIAGONALS.get_raw()) ^ CENTER_SQUARES.get_raw()) << std::endl;
 
-    LookupTable table;
-
     std::cout << sizeof(Ply) << std::endl;
     std::cout << sizeof(Mask) << std::endl;
     std::cout << sizeof(Location) << std::endl;
     std::cout << sizeof(LookupTable) << std::endl;
 
-    
+    Mask test = Mask(0x1224489020418204).flip_vertical();
+    std::cout << test << std::endl;
+
+    for (size_t i = 0; i < 15; i++)
+    {
+        std::cout << test.rotate_right_45().get_anti_diagonal(i) << std::endl;
+    }
     /*
+
+    
+
     Mask test(0x1224489020418204);
     //Mask test(0x22120a0e1222221e);
     std::cout << test << std::endl;
