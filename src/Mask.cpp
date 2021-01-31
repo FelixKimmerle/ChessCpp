@@ -4,6 +4,9 @@
 #include <cmath>
 #include "Definitions.hpp"
 
+const uint64_t notAFile = 0xfefefefefefefefe; // ~0x0101010101010101
+const uint64_t notHFile = 0x7f7f7f7f7f7f7f7f; // ~0x8080808080808080
+
 Mask::Mask(uint64_t mask) : mask(mask)
 {
 }
@@ -39,9 +42,13 @@ void Mask::operator=(const uint64_t other)
     mask = other;
 }
 
-Mask Mask::operator<<(const uint64_t other) const
+Mask Mask::operator<<(const uint8_t other) const
 {
     return mask << other;
+}
+Mask Mask::operator>>(const uint8_t other) const
+{
+    return mask >> other;
 }
 
 bool Mask::operator!=(const Mask &other) const
@@ -90,6 +97,11 @@ void Mask::set(Location location)
     mask |= (1ull << location.get_number());
 }
 
+void Mask::reset(Location location)
+{
+    mask &= ~(1ull << location.get_number());
+}
+
 Line Mask::get_line(uint8_t index) const
 {
     assert(index < 8);
@@ -101,14 +113,14 @@ Line Mask::get_diagonal(uint8_t index) const
 {
     assert(index < 15);
     Line line = get_line(OffsetTable[index + 1]);
-    return (line & MaskTable[index]) >> ShiftTable[index];
+    return (line & MaskTable[index]); // >> ShiftTable[index];
 }
 
 Line Mask::get_anti_diagonal(uint8_t index) const
 {
     assert(index < 15);
     Line line = get_line(OffsetTable[index + 1]);
-    return (line & MaskTable[14 - index]) >> ShiftTable[14 - index];
+    return (line & MaskTable[14 - index]); // >> ShiftTable[14 - index];
 }
 
 Location Mask::get_next_location()
@@ -122,9 +134,24 @@ bool Mask::is_zero() const
     return mask == 0;
 }
 
-inline uint64_t rotate_right(uint64_t x, uint8_t bits)
+inline uint64_t rotate_bits_right_internal(uint64_t x, uint8_t bits)
 {
     return (x >> bits) | (x << (64 - bits));
+}
+
+inline uint64_t rotate_bits_left_internal(uint64_t x, uint8_t bits)
+{
+    return (x >> bits) | (x << (64 - bits));
+}
+
+Mask Mask::rotate_bits_right(uint8_t bits) const
+{
+    return rotate_bits_right_internal(mask, bits);
+}
+
+Mask Mask::rotate_bits_left(uint8_t bits) const
+{
+    return rotate_bits_left_internal(mask, bits);
 }
 
 Mask Mask::rotate_right_45() const
@@ -133,9 +160,9 @@ Mask Mask::rotate_right_45() const
     const uint64_t k2 = 0xCCCCCCCCCCCCCCCC;
     const uint64_t k4 = 0xF0F0F0F0F0F0F0F0;
     uint64_t result = mask;
-    result ^= k1 & (result ^ rotate_right(result, 8));
-    result ^= k2 & (result ^ rotate_right(result, 16));
-    result ^= k4 & (result ^ rotate_right(result, 32));
+    result ^= k1 & (result ^ rotate_bits_right_internal(result, 8));
+    result ^= k2 & (result ^ rotate_bits_right_internal(result, 16));
+    result ^= k4 & (result ^ rotate_bits_right_internal(result, 32));
     return result;
 }
 Mask Mask::rotate_left_45() const
@@ -144,9 +171,9 @@ Mask Mask::rotate_left_45() const
     const uint64_t k2 = 0x3333333333333333;
     const uint64_t k4 = 0x0f0f0f0f0f0f0f0f;
     uint64_t result = mask;
-    result ^= k1 & (result ^ rotate_right(result, 8));
-    result ^= k2 & (result ^ rotate_right(result, 16));
-    result ^= k4 & (result ^ rotate_right(result, 32));
+    result ^= k1 & (result ^ rotate_bits_right_internal(result, 8));
+    result ^= k2 & (result ^ rotate_bits_right_internal(result, 16));
+    result ^= k4 & (result ^ rotate_bits_right_internal(result, 32));
     return result;
 }
 Mask Mask::rotate_right_90() const
@@ -163,7 +190,36 @@ Mask Mask::flip_vertical() const
 {
     return __builtin_bswap64(mask);
 }
+
+Mask Mask::flip_horizontal() const
+{
+    const uint64_t k1 = 0x5555555555555555;
+    const uint64_t k2 = 0x3333333333333333;
+    const uint64_t k4 = 0x0f0f0f0f0f0f0f0f;
+    uint64_t result = mask;
+    result = ((result >> 1) & k1) + 2 * (result & k1);
+    result = ((result >> 2) & k2) + 4 * (result & k2);
+    result = ((result >> 4) & k4) + 16 * (result & k4);
+    return result;
+}
+
 Mask Mask::flip_main_diag() const
+{
+    uint64_t t;
+    const uint64_t k1 = 0xaa00aa00aa00aa00;
+    const uint64_t k2 = 0xcccc0000cccc0000;
+    const uint64_t k4 = 0xf0f0f0f00f0f0f0f;
+    uint64_t result = mask;
+    t = result ^ (result << 36);
+    result ^= k4 & (t ^ (result >> 36));
+    t = k2 & (result ^ (result << 18));
+    result ^= t ^ (t >> 18);
+    t = k1 & (result ^ (result << 9));
+    result ^= t ^ (t >> 9);
+    return result;
+}
+
+Mask Mask::flip_anti_diag() const
 {
     uint64_t t;
     const uint64_t k1 = 0x5500550055005500;
@@ -179,20 +235,38 @@ Mask Mask::flip_main_diag() const
     return result;
 }
 
-Mask Mask::flip_anti_diag() const
+Mask Mask::eastOne() const
 {
-    uint64_t t;
-    const uint64_t k1 = 0xaa00aa00aa00aa00;
-    const uint64_t k2 = 0xcccc0000cccc0000;
-    const uint64_t k4 = 0xf0f0f0f00f0f0f0f;
-    uint64_t result = mask;
-    t = result ^ (result << 36);
-    result ^= k4 & (t ^ (result >> 36));
-    t = k2 & (result ^ (result << 18));
-    result ^= t ^ (t >> 18);
-    t = k1 & (result ^ (result << 9));
-    result ^= t ^ (t >> 9);
-    return result;
+    return (mask & notHFile) << 1;
+}
+Mask Mask::noEaOne() const
+{
+    return (mask & notHFile) << 9;
+}
+Mask Mask::soEaOne() const
+{
+    return (mask & notHFile) >> 7;
+}
+Mask Mask::westOne() const
+{
+    return (mask & notAFile) >> 1;
+}
+Mask Mask::soWeOne() const
+{
+    return (mask & notAFile) >> 9;
+}
+Mask Mask::noWeOne() const
+{
+    return (mask & notAFile) << 7;
+}
+
+Mask Mask::soutOne() const
+{
+    return mask >> 8;
+}
+Mask Mask::nortOne() const
+{
+    return mask << 8;
 }
 
 void Mask::background(uint8_t x, uint8_t y, std::ostream &os) const
@@ -269,7 +343,7 @@ void Mask::print_line_position(uint8_t y, std::ostream &os) const
 
 std::ostream &operator<<(std::ostream &os, const Mask &mask)
 {
-    for (uint8_t y = 7; y != 255; y--)
+    for (uint8_t y = 0; y != 8; y++)
     {
         mask.print_line_position(y, os);
         mask.print_line_values(y, os);

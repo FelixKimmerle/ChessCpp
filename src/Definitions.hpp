@@ -20,6 +20,28 @@ const Mask FILE_F = 0x2020202020202020ull;
 const Mask FILE_G = 0x4040404040404040ull;
 const Mask FILE_H = 0x8080808080808080ull;
 
+static const Mask ranks[] = {
+    RANK_1,
+    RANK_2,
+    RANK_3,
+    RANK_4,
+    RANK_5,
+    RANK_6,
+    RANK_7,
+    RANK_8,
+};
+
+static const Mask files[] = {
+    FILE_A,
+    FILE_B,
+    FILE_C,
+    FILE_D,
+    FILE_E,
+    FILE_F,
+    FILE_G,
+    FILE_H,
+};
+
 const Mask WHITE_SQUARES = 0x55AA55AA55AA55AAull;
 const Mask BLACK_SQUARES = 0xAA55AA55AA55AA55ull;
 
@@ -45,7 +67,9 @@ const unsigned int NUMBER_PLAYERS = 2;
 const uint8_t COLOR_WHITE = 0;
 const uint8_t COLOR_BLACK = 1;
 
-enum class Pieces : uint8_t
+static const uint8_t other_color[] = {COLOR_BLACK, COLOR_WHITE};
+
+enum class Piece : uint8_t
 {
     Pawn,
     Rook,
@@ -53,6 +77,7 @@ enum class Pieces : uint8_t
     Bishop,
     Queen,
     King,
+    Empty,
 };
 
 const char characters[] = {'P', 'R', 'N', 'B', 'Q', 'K'};
@@ -74,7 +99,6 @@ static const unsigned char MaskTable[] = {
     0b11000000,
     0b10000000,
 };
-
 
 static const unsigned char OffsetTable[] = {
     0,

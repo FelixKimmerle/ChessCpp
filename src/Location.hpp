@@ -10,16 +10,22 @@ private:
 public:
     Location(uint8_t number);
     Location(uint8_t x, uint8_t y);
+    Location(const char name[2]);
     ~Location();
 
     Mask get_mask()const;
-    uint8_t get_x()const;
-    uint8_t get_y()const;
+    uint8_t get_file()const;
+    uint8_t get_rank()const;
+    uint8_t get_file_flipped()const;
+    uint8_t get_rank_flipped()const;
     uint8_t get_number()const;
     char get_file_char()const;
     char get_rank_char()const;
     uint8_t get_diagonal()const;
     uint8_t get_anti_diagonal()const;
+
+    bool operator==(const Location &other)const;
+    bool operator!=(const Location &other)const;
 
     friend std::ostream &operator<<(std::ostream &os, const Location &location);
 };

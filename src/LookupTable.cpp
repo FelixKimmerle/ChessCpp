@@ -6,39 +6,28 @@ LookupTable::LookupTable(/* args */)
 {
     init_ray_attacks();
     init_knight_attacks();
+    init_king_attacks();
+    init_pawn_attacks();
 }
 
 LookupTable::~LookupTable()
 {
 }
-#include <iostream>
-Mask LookupTable::get_rook_attack(Mask occupied, Mask rotated_occupied, Mask own, Location position)
+
+//TODO use more lookup tabels to make rotation redundand
+Mask LookupTable::get_rook_attack(Mask occupied, Mask anti_flipped, Mask own, Location position)
 {
-    std::cout << position << std::endl;
-    std::cout << "Occupied: " << std::endl
-              << occupied << std::endl;
-    std::cout << "Rotated: " << std::endl
-              << rotated_occupied << std::endl;
+    uint8_t file = position.get_file();
+    Line occupied_file = anti_flipped.get_line(file);
 
-    uint8_t file = 7 - position.get_x();
-    std::cout << "File number: " << (uint)file << std::endl;
-    Line occupied_file = rotated_occupied.get_line(file);
-    std::cout << "Occupied file: " << std::endl
-              << occupied_file << std::endl;
-
-    uint8_t rank = position.get_y();
-    std::cout << "Rank number: " << (uint)file << std::endl;
+    uint8_t rank = position.get_rank();
     Line occupied_rank = occupied.get_line(rank);
-    std::cout << "Occupied rank: " << std::endl
-              << occupied_rank << std::endl;
 
-    Mask file_attacks = Mask(ray_attacks[file][trim(occupied_file.get_raw())], file).rotate_left_90();
-    std::cout << "file_attacks" << std::endl
-              << file_attacks << std::endl;
+    Line file_attacks_line = ray_attacks[rank][trim(occupied_file.get_raw())];
+    Mask file_attacks = Mask(file_attacks_line, file).flip_anti_diag();
 
-    Mask rank_attacks(ray_attacks[7 - rank][trim(occupied_rank.get_raw())], rank);
-    std::cout << "rank_attacks" << std::endl
-              << rank_attacks << std::endl;
+    Line rank_attacks_line = ray_attacks[file][trim(occupied_rank.get_raw())];
+    Mask rank_attacks(rank_attacks_line, rank);
 
     return (file_attacks | rank_attacks) & (~own);
 }
@@ -52,28 +41,32 @@ Mask LookupTable::get_bishop_attack(Mask occupied_left, Mask occupied_right, Mas
     uint8_t diag = position.get_diagonal();
     uint8_t anti_diag = position.get_anti_diagonal();
 
-    //std::cout << (int)diag << std::endl;
-    //std::cout << (int)anti_diag << std::endl;
+    //std::cout << "diag: " << (int)diag << std::endl;
+    //std::cout << "anti diag: " << (int)anti_diag << std::endl;
 
     Line diag_occupied = occupied_left.get_diagonal(diag);
     Line anti_diag_occupied = occupied_right.get_anti_diagonal(anti_diag);
 
-    //std::cout << diag_occupied << std::endl;
-    //std::cout << anti_diag_occupied << std::endl;
+    //std::cout << "diag_occupied: " << std::endl << diag_occupied << std::endl;
+    //std::cout << "anti_diag_occupied: " << std::endl << anti_diag_occupied << std::endl;
 
-    uint8_t diag_pos = position.get_x();
-    uint8_t anti_diag_pos = position.get_x();
+    uint8_t diag_pos = position.get_file();
+    uint8_t anti_diag_pos = position.get_file();
 
     //std::cout << (int)diag_pos << std::endl;
     //std::cout << (int)anti_diag_pos << std::endl;
+
     Line diag_attacks = (ray_attacks[diag_pos][trim(diag_occupied.get_raw())] & MaskTable[diag]);
     Line anti_diag_attacks = ((ray_attacks[anti_diag_pos][trim(anti_diag_occupied.get_raw())] & MaskTable[14 - anti_diag]));
 
-    //std::cout << diag_attacks << std::endl;
-    //std::cout << anti_diag_attacks << std::endl;
+    //std::cout << "diag_attacks: " << std::endl << diag_attacks << std::endl;
+    //std::cout << "anti_diag_attacks: " << std::endl << anti_diag_attacks << std::endl;
 
     Mask diag_mask = Mask(diag_attacks, OffsetTable[diag]);
     Mask anti_diag_mask = Mask(anti_diag_attacks, OffsetTable[anti_diag]);
+
+    //std::cout << "diag_mask: " << std::endl << diag_mask << std::endl;
+    //std::cout << "anti_diag_mask: " << std::endl << anti_diag_mask << std::endl;
 
     //std::cout << (int)diag << std::endl;
     //std::cout << (int)anti_diag << std::endl;
@@ -81,15 +74,47 @@ Mask LookupTable::get_bishop_attack(Mask occupied_left, Mask occupied_right, Mas
     diag_mask = diag_mask.rotate_right_45();
     anti_diag_mask = anti_diag_mask.rotate_left_45();
 
-    //std::cout << diag_mask << std::endl;
-    //std::cout << anti_diag_mask << std::endl;
+    //std::cout << "diag_mask rot: " << std::endl << diag_mask << std::endl;
+    //std::cout << "anti_diag_mask rot: " << std::endl << anti_diag_mask << std::endl;
 
-    return (diag_mask | anti_diag_mask) & ~(own);
+    return (diag_mask | anti_diag_mask) & (~own);
+}
+
+Mask LookupTable::get_knight_attack(Mask own, Location position)
+{
+    return knight_attacks[position.get_number()] & (~own);
+}
+Mask LookupTable::get_king_attack(Mask own, Location position)
+{
+    return king_attacks[position.get_number()] & (~own);
+}
+
+Mask LookupTable::get_pawn_attacks(uint8_t color, Mask enemy_occupied, Location position)
+{
+    return pawn_attacks[color][position.get_number()] & enemy_occupied;
 }
 
 uint8_t LookupTable::trim(uint8_t value)
 {
     return (value & 0b01111110) >> 1;
+}
+
+void LookupTable::init_king_attacks()
+{
+    for (uint8_t y = 0; y < 8; y++)
+    {
+        for (uint8_t x = 0; x < 8; x++)
+        {
+            Location location(x, y);
+            Mask king = location.get_mask();
+            Mask attacks = king.eastOne() | king.westOne();
+            king |= attacks;
+            attacks |= king.nortOne() | king.soutOne();
+            //std::cout << location << std::endl;
+            //std::cout << attacks << std::endl;
+            king_attacks[location.get_number()] = attacks;
+        }
+    }
 }
 
 void LookupTable::init_knight_attacks()
@@ -98,7 +123,7 @@ void LookupTable::init_knight_attacks()
     {
         for (uint8_t x = 0; x < 8; x++)
         {
-            Location location(x,y);
+            Location location(x, y);
             uint64_t knight = location.get_mask().get_raw();
             uint64_t l1 = (knight >> 1) & (0x7f7f7f7f7f7f7f7f);
             uint64_t l2 = (knight >> 2) & (0x3f3f3f3f3f3f3f3f);
@@ -108,9 +133,42 @@ void LookupTable::init_knight_attacks()
             uint64_t h2 = l2 | r2;
             Mask mask((h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8));
 
-            std::cout << location << std::endl;
-            std::cout << mask << std::endl;
+            //std::cout << location << std::endl;
+            //std::cout << mask << std::endl;
             knight_attacks[location.get_number()] = mask;
+        }
+    }
+}
+
+void LookupTable::init_pawn_attacks()
+{
+    for (uint8_t y = 0; y < 8; y++)
+    {
+        for (uint8_t x = 0; x < 8; x++)
+        {
+            Location location(x, y);
+            Mask location_mask = location.get_mask();
+            Mask white;
+            if (x != 0)
+            {
+                white |= location_mask << 7;
+            }
+            if (x != 7)
+            {
+                white |= location_mask << 9;
+            }
+            Mask black;
+            if (x != 7)
+            {
+                black |= location_mask >> 7;
+            }
+            if (x != 0)
+            {
+                black |= location_mask >> 9;
+            }
+
+            pawn_attacks[COLOR_WHITE][location.get_number()] = white;
+            pawn_attacks[COLOR_BLACK][location.get_number()] = black;
         }
     }
 }

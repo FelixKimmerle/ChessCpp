@@ -12,17 +12,31 @@ class Board
 {
 private:
     //Mask pieces[NUMBER_PLAYERS][NUMBER_BITBOARDS];
-    std::array<std::array<Mask, NUMBER_BITBOARDS>, NUMBER_PLAYERS> pieces;
-    uint16_t data;
+    //std::array<std::array<Mask, NUMBER_BITBOARDS>, NUMBER_PLAYERS> pieces;
+    MultiDimArray<Mask, NUMBER_PLAYERS, NUMBER_BITBOARDS> pieces;
+    Mask occupied;
+    Mask occupied_flipped;
+    Mask occupied_left;
+    Mask occupied_right;
+    uint8_t turn : 1;
     std::vector<Ply> possible_plies;
-    LookupTable table;
+    static LookupTable table;
+    Mask enpasant;
 
-    void calculate_possible_plies_pawns();
-    void calculate_possible_plies_rook();
-    void calculate_possible_plies_knight();
-    void calculate_possible_plies_bishop();
-    void calculate_possible_plies_queen();
-    void calculate_possible_plies_king();
+    Mask white_push_targets(Mask pawns, Mask empty);
+    Mask black_push_targets(Mask pawns, Mask empty);
+
+    Mask white_double_push_targets(Mask single_push_targets, Mask empty);
+    Mask black_double_push_targets(Mask single_push_targets, Mask empty);
+
+    void calculate_possible_plies_pawns(std::vector<Ply> &possible_plies, uint8_t color);
+    void calculate_possible_plies_rook(std::vector<Ply> &possible_plies, uint8_t color);
+    void calculate_possible_plies_knight(std::vector<Ply> &possible_plies, uint8_t color);
+    void calculate_possible_plies_bishop(std::vector<Ply> &possible_plies, uint8_t color);
+    void calculate_possible_plies_queen(std::vector<Ply> &possible_plies, uint8_t color);
+    void calculate_possible_plies_king(std::vector<Ply> &possible_plies, uint8_t color);
+
+    void recalculate_masks();
 
     /*
         1. turn (0 - white, 1 - black)
@@ -41,9 +55,16 @@ private:
     void print_line_position(uint8_t y, std::ostream &os) const;
     void print_line(uint8_t y, std::ostream &os) const;
 
+    void calculate_moves(std::vector<Ply> &possible_plies, Piece piece, uint8_t color);
+
 public:
     Board(/* args */);
     ~Board();
+
+    void caluclate_possible_lies();
+    void execute_ply(Ply ply);
+    void print_ply(Ply ply);
+    void set(Location location, Piece piece, uint8_t color);
 
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 };
