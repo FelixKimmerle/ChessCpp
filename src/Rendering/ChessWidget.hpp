@@ -13,12 +13,15 @@ private:
     sf::VertexArray dark_square;
 
     sf::Texture textures[12];
+    sf::Font font;
+    sf::Text texts[64];
 
     std::vector<sf::Sprite> sprites;
 
     float tile_size;
     float light_square_color[3];
     float dark_square_color[3];
+    float text_color[3];
 
     Location selected_location;
     Piece selected_piece;
@@ -28,8 +31,16 @@ private:
     std::unordered_set<uint8_t> animated;
     std::vector<std::string> moves;
 
+    bool new_move;
+
     State state;
     void reload();
+
+    bool draw_text;
+    bool draw_animations;
+    float animation_speed;
+
+    std::vector<sf::Texture> texure_history;
 
     std::stack<Ply> history;
 public:

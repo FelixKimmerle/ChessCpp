@@ -8,19 +8,21 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(800, 800), "ImGui + SFML = <3");
+    sf::RenderWindow window(sf::VideoMode(800, 500), "ImGui + SFML = <3");
     window.setVerticalSyncEnabled(true);
     ImGui::SFML::Init(window);
 
-    ChessWidget chess_widget(400);
+    ChessWidget chess_widget(500);
     chess_widget.scale(1.0, -1.0);
-    chess_widget.setPosition(0, 400);
+    chess_widget.setPosition(0, 500);
 
     sf::RenderTexture render_texutre;
-    render_texutre.create(500, 500);
-    //sprite.scale(-1.0f,1.0f);
+    render_texutre.create(500,500);
+
     const static float ratio = 0.6;
-    float menu_bar_size = 0;
+
+    //sprite.scale(-1.0f,1.0f);
+    float menu_bar_size = 25;
     int xoffset = 0;
     int yoffset = 0;
 
@@ -44,11 +46,11 @@ int main()
                 {
                     window.close();
                 }
-                else if(event.key.code == sf::Keyboard::Z && event.key.control)
+                else if (event.key.code == sf::Keyboard::Z && event.key.control)
                 {
                     chess_widget.undo();
                 }
-                else if(event.key.code == sf::Keyboard::Space)
+                else if (event.key.code == sf::Keyboard::Space)
                 {
                     chess_widget.play_random();
                 }
@@ -78,7 +80,6 @@ int main()
 
         ImGui::SFML::Update(window, deltaClock.restart());
 
-        //ImGui::ShowDemoWindow();
 
         chess_widget.update();
 
@@ -102,12 +103,17 @@ int main()
         xoffset = ImGui::GetWindowWidth() - ImGui::GetWindowContentRegionWidth();
         yoffset = ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight();
 
+        
+
         ImGui::Image(render_texutre.getTexture());
         ImGui::SameLine();
-        ImGui::BeginChildFrame(1, ImVec2(ImGui::GetWindowContentRegionWidth() * (1.0f - ratio), window.getSize().y - menu_bar_size * 1.50f), ImGuiWindowFlags_NoBackground);
+        ImGui::BeginChildFrame(1, ImVec2(ImGui::GetWindowContentRegionWidth() - render_texutre.getSize().x - xoffset/2.0f, window.getSize().y - menu_bar_size * 1.50f + yoffset/2.0f), ImGuiWindowFlags_NoBackground);
         chess_widget.draw_gui();
         ImGui::EndChildFrame();
         ImGui::End();
+
+        ImGui::ShowDemoWindow();
+        
 
         window.clear();
         ImGui::SFML::Render(window);

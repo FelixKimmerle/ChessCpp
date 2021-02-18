@@ -279,11 +279,12 @@ void State::caluclate_possible_plies()
     calculate_possible_plies_queen(possible_plies, turn);
     calculate_possible_plies_king(possible_plies, turn);
 
+    /*
     for (Ply ply : possible_plies)
     {
         std::cout << get_algebraic_notation(ply) << std::endl;
     }
-
+    */
     /*
     if (possible_plies.size() != 0)
     {
@@ -327,7 +328,7 @@ void State::execute_ply(Ply ply)
 
     turn = other_color(turn);
 
-    std::cout << *this << std::endl;
+    //std::cout << *this << std::endl;
 
     caluclate_possible_plies();
 }
