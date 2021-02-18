@@ -112,7 +112,7 @@ int main()
         ImGui::EndChildFrame();
         ImGui::End();
 
-        ImGui::ShowDemoWindow();
+        //ImGui::ShowDemoWindow();
         
 
         window.clear();

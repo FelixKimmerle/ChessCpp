@@ -247,6 +247,7 @@ void ChessWidget::undo()
     {
         Ply ply = history.top();
         history.pop();
+        texure_history.pop_back();
         state.undo_ply(ply);
         reload();
         Ply reverse(ply.get_piece(), ply.get_destination(), ply.get_source());
@@ -290,7 +291,6 @@ void ChessWidget::play_random()
                     animated.insert(ply.get_destination().get_square());
                     animations.push_back(MoveAnimation(animation_speed, ply, tile_size, sprite));
                 }
-                reload();
 
                 sf::RenderStates states;
                 states.transform.scale(200.0f / (tile_size * 8.0f), 200.0f / (tile_size * 8.0f));
@@ -305,11 +305,13 @@ void ChessWidget::play_random()
                 bool old_draw_text = draw_text;
                 draw_animations = false;
                 draw_text = false;
+                reload();
                 tool_tip_texture.draw(*this, states);
                 draw_animations = old_draw_animations;
                 draw_text = old_draw_text;
                 tool_tip_texture.display();
                 texure_history.push_back(tool_tip_texture.getTexture());
+                reload();
             }
             counter++;
         }
@@ -325,7 +327,7 @@ void ChessWidget::reload()
         {
             Location location(file, rank);
             Color color = state.get_color(location);
-            if (color != NoColor && location != selected_location && (draw_animations || animated.count(location.get_square()) == 0))
+            if (color != NoColor && location != selected_location && (!draw_animations || animated.count(location.get_square()) == 0))
             {
                 Piece piece = state.get_piece(location, color);
                 sf::Sprite sprite(textures[2 * piece + color]);
