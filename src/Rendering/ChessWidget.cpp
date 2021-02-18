@@ -184,9 +184,9 @@ void ChessWidget::undo()
 void ChessWidget::play_random()
 {
     std::unordered_set<Ply> possible = state.get_possible_plies();
-    int randidx = rand() % possible.size();
     if (possible.size() != 0)
     {
+        int randidx = rand() % possible.size();
         int counter = 0;
         for (auto &&ply : possible)
         {
