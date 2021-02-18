@@ -249,7 +249,6 @@ void ChessWidget::undo()
         history.pop();
         texure_history.pop_back();
         state.undo_ply(ply);
-        reload();
         Ply reverse(ply.get_piece(), ply.get_destination(), ply.get_source());
 
         sf::Sprite sprite(textures[2 * ply.get_piece() + state.get_turn()]);
@@ -262,6 +261,7 @@ void ChessWidget::undo()
         }
         moves.pop_back();
         new_move = true;
+        reload();
     }
 }
 
