@@ -1,4 +1,4 @@
-TARGET_EXEC ?= ChessEngine
+TARGET_EXEC ?= Chess
 
 BUILD_DIR ?= ./build
 SRC_DIRS ?= src/
@@ -13,7 +13,8 @@ DEPS = $(shell find build/ -name *.d)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CPPFLAGS ?= $(INC_FLAGS) -MMD -MD -MP #-Wall -Wextra -Wfloat-equal -Wundef -Wunreachable-code -Wcast-qual
+CPPFLAGS ?= $(INC_FLAGS) -MMD -MD -MP -Wall -Wextra #-Wfloat-equal -Wundef -Wunreachable-code -Wcast-qual
+LDFLAGS ?= -lsfml-system -lsfml-window -lsfml-graphics -lGL
 
 #
 # Debug build settings
