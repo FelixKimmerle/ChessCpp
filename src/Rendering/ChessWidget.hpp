@@ -27,9 +27,11 @@ private:
     Piece selected_piece;
     sf::Sprite selected_sprite;
 
-    std::vector<MoveAnimation> animations;
+    std::map<uint8_t,MoveAnimation> animations;
     std::unordered_set<uint8_t> animated;
     std::vector<std::string> moves;
+
+    void add_animation(float speed, Ply ply, float tile_size, sf::Sprite &sprite);
 
     bool new_move;
 
@@ -43,6 +45,8 @@ private:
     std::vector<sf::Texture> texure_history;
 
     std::stack<Ply> history;
+
+    std::string latest_fen;
 public:
     ChessWidget(float size);
     ~ChessWidget();
@@ -52,6 +56,7 @@ public:
     void update();
     void undo();
     void play_random();
+    void load_fen(const std::string &fen);
 
     void mouse_moved(sf::Vector2i position);
     void mouse_pressed(sf::Vector2i position, sf::Mouse::Button button);

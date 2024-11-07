@@ -120,15 +120,17 @@ Mask State::black_double_push_targets(Mask single_push_targets, Mask empty) cons
 {
     return single_push_targets.soutOne() & empty & RANK_5;
 }
-//TODO enpasant and promotion
+// TODO enpasant and promotion
 void State::calculate_possible_plies_pawns(std::unordered_set<Ply> &possible_plies, Color color) const
 {
     Mask pawns = pieces[color][PAWN_POSITION];
     Mask empty = ~occupied;
-    //pawn pushes
+    // pawn pushes
     Mask single_push_targets;
     Mask double_push_targets;
-    uint8_t offset = UINT8_MAX;
+    uint8_t offset = UINT8_MAX; // aka -1
+    uint8_t promotion_rank = color == Color::White ? 7 : 0;
+
     if (color == White)
     {
         single_push_targets = white_push_targets(pawns, empty);
@@ -145,7 +147,17 @@ void State::calculate_possible_plies_pawns(std::unordered_set<Ply> &possible_pli
     {
         Location destination = single_push_targets.get_next_location();
         Location source = Location(destination.get_file(), destination.get_rank() + offset);
-        possible_plies.insert(Ply(Piece::Pawn, source, destination));
+        if (destination.get_rank() != promotion_rank)
+        {
+            possible_plies.insert(Ply(Piece::Pawn, source, destination));
+        }
+        else
+        {
+            possible_plies.insert(Ply(Piece::Pawn, source, destination, Piece::Queen));
+            possible_plies.insert(Ply(Piece::Pawn, source, destination, Piece::Knight));
+            possible_plies.insert(Ply(Piece::Pawn, source, destination, Piece::Bishop));
+            possible_plies.insert(Ply(Piece::Pawn, source, destination, Piece::Rook));
+        }
     }
 
     while (!double_push_targets.is_zero())
@@ -154,7 +166,7 @@ void State::calculate_possible_plies_pawns(std::unordered_set<Ply> &possible_pli
         Location source = Location(destination.get_file(), (destination.get_rank() + offset) + offset);
         possible_plies.insert(Ply(Piece::Pawn, source, destination));
     }
-    //pawn attacks
+    // pawn attacks
     Mask enemy_occupied = pieces[other_color(color)][ALL_POSITION];
 
     while (!pawns.is_zero())
@@ -164,7 +176,17 @@ void State::calculate_possible_plies_pawns(std::unordered_set<Ply> &possible_pli
         while (!moves.is_zero())
         {
             Location destination = moves.get_next_location();
-            possible_plies.insert(Ply(Piece::Pawn, location, destination));
+            if (destination.get_rank() != promotion_rank)
+            {
+                possible_plies.insert(Ply(Piece::Pawn, location, destination));
+            }
+            else
+            {
+                possible_plies.insert(Ply(Piece::Pawn, location, destination, Piece::Queen));
+                possible_plies.insert(Ply(Piece::Pawn, location, destination, Piece::Knight));
+                possible_plies.insert(Ply(Piece::Pawn, location, destination, Piece::Bishop));
+                possible_plies.insert(Ply(Piece::Pawn, location, destination, Piece::Rook));
+            }
         }
     }
 }
@@ -217,6 +239,8 @@ void State::calculate_possible_plies_queen(std::unordered_set<Ply> &possible_pli
 {
     Mask queens = pieces[color][QUEEN_POSITION];
     Mask own = pieces[color][ALL_POSITION];
+
+    Mask thread = 0;
     while (!queens.is_zero())
     {
         Location location = queens.get_next_location();
@@ -234,15 +258,15 @@ void State::calculate_possible_plies_queen(std::unordered_set<Ply> &possible_pli
         }
     }
 }
-//TODO castling
-void State::calculate_possible_plies_king(std::unordered_set<Ply> &possible_plies, Color color) const
+// TODO castling
+void State::calculate_possible_plies_king(std::unordered_set<Ply> &possible_plies, Color color, Mask attack_mask) const
 {
     Mask kings = pieces[color][KING_POSITION];
     Mask own = pieces[color][ALL_POSITION];
     while (!kings.is_zero())
     {
         Location location = kings.get_next_location();
-        Mask moves = table.get_king_attack(own, location);
+        Mask moves = table.get_king_attack(own, location) & (~attack_mask);
         while (!moves.is_zero())
         {
             Location destination = moves.get_next_location();
@@ -269,15 +293,86 @@ void State::recalculate_masks()
     occupied_right = occupied.rotate_right_45();
 }
 
+Mask State::calculate_attack_mask(Color player)
+{
+    Mask attack_mask;
+    {
+        Mask pawns = pieces[player][PAWN_POSITION];
+        while (!pawns.is_zero())
+        {
+            Location location = pawns.get_next_location();
+            Mask moves = table.get_pawn_attacks(player, location);
+            attack_mask |= moves;
+        }
+    }
+
+    {
+        Mask rooks = pieces[player][ROOK_POSITION];
+        while (!rooks.is_zero())
+        {
+            Location location = rooks.get_next_location();
+            Mask moves = table.get_rook_attack(occupied, occupied_flipped, 0, location);
+            attack_mask |= moves;
+        }
+    }
+    {
+        Mask knights = pieces[player][KNIGHT_POSITION];
+        while (!knights.is_zero())
+        {
+            Location location = knights.get_next_location();
+            Mask moves = table.get_knight_attack(0, location);
+            attack_mask |= moves;
+        }
+    }
+    {
+        Mask bishops = pieces[player][BISHOP_POSITION];
+        while (!bishops.is_zero())
+        {
+            Location location = bishops.get_next_location();
+            Mask moves = table.get_bishop_attack(occupied_left, occupied_right, 0, location);
+            attack_mask |= moves;
+        }
+    }
+
+    {
+
+        Mask queens = pieces[player][QUEEN_POSITION];
+        while (!queens.is_zero())
+        {
+            Location location = queens.get_next_location();
+            Mask bishop_moves = table.get_bishop_attack(occupied_left, occupied_right, 0, location);
+            Mask rook_moves = table.get_rook_attack(occupied, occupied_flipped, 0, location);
+            attack_mask |= bishop_moves;
+            attack_mask |= rook_moves;
+        }
+    }
+    {
+
+        Mask kings = pieces[player][KING_POSITION];
+        while (!kings.is_zero())
+        {
+            Location location = kings.get_next_location();
+            Mask moves = table.get_king_attack(0, location);
+            attack_mask |= moves;
+        }
+    }
+    return attack_mask;
+}
+
 void State::caluclate_possible_plies()
 {
+    Mask attack_mask = calculate_attack_mask(other_color(turn));
+    std::cout << to_char(other_color(turn)) << std::endl;
+    std::cout << attack_mask << std::endl;
+    std::cout << to_char(turn) << std::endl;
+    std::cout << calculate_attack_mask(turn) << std::endl;
     possible_plies.clear();
     calculate_possible_plies_pawns(possible_plies, turn);
     calculate_possible_plies_rook(possible_plies, turn);
     calculate_possible_plies_knight(possible_plies, turn);
     calculate_possible_plies_bishop(possible_plies, turn);
     calculate_possible_plies_queen(possible_plies, turn);
-    calculate_possible_plies_king(possible_plies, turn);
+    calculate_possible_plies_king(possible_plies, turn, attack_mask);
 
     /*
     for (Ply ply : possible_plies)
@@ -303,13 +398,18 @@ void State::execute_ply(Ply ply)
 {
     Location source = ply.get_source();
     Location destination = ply.get_destination();
-    uint8_t mask_index = static_cast<uint8_t>(ply.get_piece());
+    uint8_t mask_index_source = static_cast<uint8_t>(ply.get_piece());
+    uint8_t mask_index_destination = mask_index_source;
+    if (ply.is_promotion())
+    {
+        mask_index_destination = static_cast<uint8_t>(ply.get_ply_type());
+    }
 
-    assert(pieces[turn][mask_index].is_set(source));
-    assert(!pieces[turn][mask_index].is_set(destination));
+    assert(pieces[turn][mask_index_source].is_set(source));
+    assert(!pieces[turn][mask_index_source].is_set(destination));
 
-    pieces[turn][mask_index].set(destination);
-    pieces[turn][mask_index].reset(source);
+    pieces[turn][mask_index_destination].set(destination);
+    pieces[turn][mask_index_source].reset(source);
 
     Piece changed = Empty;
     for (uint8_t i = 0; i < ALL_POSITION; i++)
@@ -328,7 +428,7 @@ void State::execute_ply(Ply ply)
 
     turn = other_color(turn);
 
-    //std::cout << *this << std::endl;
+    // std::cout << *this << std::endl;
 
     caluclate_possible_plies();
 }
@@ -365,7 +465,7 @@ void State::undo_ply(Ply ply)
     caluclate_possible_plies();
 }
 
-//TODO This must not be fast but should output accurate Algebraic notation
+// TODO This must not be fast but should output accurate Algebraic notation
 std::string State::get_algebraic_notation(Ply ply) const
 {
     std::stringstream ss;
@@ -415,7 +515,7 @@ std::string State::get_algebraic_notation(Ply ply) const
     }
     else
     {
-        //Pawn
+        // Pawn
         if (occupied.is_set(destination))
         {
             ss << source.get_file_char();
@@ -495,7 +595,7 @@ std::string State::to_fen() const
     return ss.str();
 }
 
-//also slow but this is ok just dont use it in move generation
+// also slow but this is ok just dont use it in move generation
 void State::calculate_moves(std::unordered_set<Ply> &possible_plies, Piece piece, Color color) const
 {
     switch (piece)
@@ -516,7 +616,7 @@ void State::calculate_moves(std::unordered_set<Ply> &possible_plies, Piece piece
         calculate_possible_plies_queen(possible_plies, color);
         break;
     case Piece::King:
-        calculate_possible_plies_king(possible_plies, color);
+        calculate_possible_plies_king(possible_plies, color, Mask());
         break;
 
     default:

@@ -18,17 +18,20 @@ int main()
     chess_widget.setPosition(0, 500);
 
     sf::RenderTexture render_texutre;
-    render_texutre.create(500,500);
+    render_texutre.create(500, 500);
 
     const static float ratio = 0.6;
 
-    //sprite.scale(-1.0f,1.0f);
+    // sprite.scale(-1.0f,1.0f);
     float menu_bar_size = 25;
     int xoffset = 0;
     int yoffset = 0;
 
     sf::Clock deltaClock;
     sf::Vector2i mouse_pos;
+    char input_buffer[256] = "";
+    std::string fen_string;
+    bool input_fen = false;
 
     while (window.isOpen())
     {
@@ -81,7 +84,6 @@ int main()
 
         ImGui::SFML::Update(window, deltaClock.restart());
 
-
         chess_widget.update();
 
         render_texutre.clear(sf::Color::Green);
@@ -96,6 +98,33 @@ int main()
         {
             if (ImGui::MenuItem("Load"))
             {
+                memset(input_buffer, 0, sizeof(input_buffer));
+                input_fen = true;
+
+                // chess_widget.load_fen();
+            }
+
+            ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize;
+            if (input_fen)
+            {
+                ImGui::Begin("FEN Input", &input_fen, window_flags);
+                if (ImGui::InputText("Enter FEN", input_buffer, 256))
+                {
+                    fen_string = input_buffer;
+                }
+                // ImGui::Text("Current FEN: %s", fen_string.c_str());
+                if(ImGui::Button("Cancel"))
+                {
+                    input_fen = false;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Ok"))
+                {
+                    chess_widget.load_fen(fen_string);
+                    input_fen = false;
+                    fen_string = "";
+                }
+                ImGui::End();
             }
             ImGui::EndMenuBar();
         }
@@ -104,17 +133,14 @@ int main()
         xoffset = ImGui::GetWindowWidth() - ImGui::GetWindowContentRegionWidth();
         yoffset = ImGui::GetFrameHeightWithSpacing() - ImGui::GetFrameHeight();
 
-        
-
         ImGui::Image(render_texutre.getTexture());
         ImGui::SameLine();
-        ImGui::BeginChildFrame(1, ImVec2(ImGui::GetWindowContentRegionWidth() - render_texutre.getSize().x - xoffset/2.0f, window.getSize().y - menu_bar_size * 1.50f + yoffset/2.0f), ImGuiWindowFlags_NoBackground);
+        ImGui::BeginChildFrame(1, ImVec2(ImGui::GetWindowContentRegionWidth() - render_texutre.getSize().x - xoffset / 2.0f, window.getSize().y - menu_bar_size * 2.0f + yoffset / 2.0f), ImGuiWindowFlags_NoBackground);
         chess_widget.draw_gui();
         ImGui::EndChildFrame();
         ImGui::End();
 
-        //ImGui::ShowDemoWindow();
-        
+        // ImGui::ShowDemoWindow();
 
         window.clear();
         ImGui::SFML::Render(window);

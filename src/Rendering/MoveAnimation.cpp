@@ -14,6 +14,7 @@ MoveAnimation::MoveAnimation(float speed, Ply ply, float tile_size, sf::Sprite s
     length = std::sqrt(dir.x * dir.x + dir.y * dir.y) / tile_size;
 }
 
+
 void MoveAnimation::update()
 {
     arg = clock.getElapsedTime().asSeconds() * 0.5f * M_PI / speed;

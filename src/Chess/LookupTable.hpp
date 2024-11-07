@@ -10,7 +10,7 @@ private:
     MultiDimArray<Mask, 64> king_attacks;
     MultiDimArray<Mask, 2, 64> pawn_attacks;
 
-    uint8_t trim(uint8_t value)const;
+    uint8_t trim(uint8_t value) const;
 
     void init_ray_attacks();
     void init_knight_attacks();
@@ -25,4 +25,5 @@ public:
     Mask get_knight_attack(Mask own, Location position) const;
     Mask get_king_attack(Mask own, Location position) const;
     Mask get_pawn_attacks(uint8_t color, Mask enemy_occupied, Location position) const;
+    Mask get_pawn_attacks(uint8_t color, Location position) const;
 };

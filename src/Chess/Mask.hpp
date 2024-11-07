@@ -95,6 +95,7 @@ public:
     Mask rotate_bits_right(uint8_t bits) const;
     Mask rotate_bits_left(uint8_t bits) const;
     bool more_than_one() const;
+    uint8_t count_ones() const;
     bool is_set(Location location) const;
     void set(Location location);
     void reset(Location location);

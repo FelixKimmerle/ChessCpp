@@ -52,10 +52,10 @@ private:
     void calculate_possible_plies_knight(std::unordered_set<Ply> &possible_plies, Color color) const;
     void calculate_possible_plies_bishop(std::unordered_set<Ply> &possible_plies, Color color) const;
     void calculate_possible_plies_queen(std::unordered_set<Ply> &possible_plies, Color color) const;
-    void calculate_possible_plies_king(std::unordered_set<Ply> &possible_plies, Color color) const;
+    void calculate_possible_plies_king(std::unordered_set<Ply> &possible_plies, Color color, Mask attack_mask) const;
 
     void recalculate_masks();
-
+    Mask calculate_attack_mask(Color player);
     /*
         1. turn (0 - white, 1 - black)
         2. white is allowed long castling

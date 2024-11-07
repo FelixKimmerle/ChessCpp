@@ -86,6 +86,11 @@ bool Mask::more_than_one() const
     return mask & (mask - 1);
 }
 
+uint8_t Mask::count_ones() const
+{
+    return __builtin_popcountll(mask);
+}
+
 bool Mask::is_set(Location location) const
 {
     return (mask >> location.get_square()) & uint8_t(1);

@@ -92,6 +92,11 @@ Mask LookupTable::get_pawn_attacks(uint8_t color, Mask enemy_occupied, Location 
     return pawn_attacks[color][position.get_square()] & enemy_occupied;
 }
 
+Mask LookupTable::get_pawn_attacks(uint8_t color, Location position) const
+{
+    return pawn_attacks[color][position.get_square()];
+}
+
 uint8_t LookupTable::trim(uint8_t value)const
 {
     return (value & 0b01111110) >> 1;

@@ -1,6 +1,9 @@
 #include "ChessWidget.hpp"
 
 #include <sstream>
+#include <cmath>
+#include <iostream>
+
 #include "imgui/imgui.h"
 #include "imgui-SFML.h"
 
@@ -11,7 +14,8 @@ ChessWidget::ChessWidget(float size) : light_square(sf::Quads, 4),
                                        light_square_color{165.f / 255.f, 106.f / 255.f, 23.f / 255.f},
                                        dark_square_color{86.f / 255.f, 38.f / 255.f, 20.f / 255.f},
                                        text_color{126.f / 255.f, 255.f / 255.f, 251.f / 255.f},
-                                       state("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"),
+                                    //    state("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"),
+                                       state("3q4/4P1P1/8/8/8/8/4p1p1/8 w - - 0 1"),
                                        selected_piece(Empty),
                                        new_move(true),
                                        draw_text(true),
@@ -102,7 +106,7 @@ void ChessWidget::draw(sf::RenderTarget &target, sf::RenderStates states) const
     {
         for (auto &&animation : animations)
         {
-            target.draw(animation, states);
+            target.draw(animation.second, states);
         }
     }
 }
@@ -172,11 +176,19 @@ void ChessWidget::draw_gui()
     }
     ImGui::Checkbox("Draw Text", &draw_text);
 
-    ImGui::Checkbox("Draw Animations", &draw_animations);
+    if (ImGui::Checkbox("Draw Animations", &draw_animations))
+    {
+        animations.clear();
+        animated.clear();
+        reload();
+    }
     if (draw_animations)
     {
         ImGui::SliderFloat("Time", &animation_speed, 0.01f, 1.0f);
     }
+    static char buffer[1024];
+    snprintf(buffer, sizeof(buffer), "%s", latest_fen.c_str());
+    ImGui::InputText("Fen: ", buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
 
     ImGui::Text("Moves:");
     if (ImGui::BeginTable("Header", 2, ImGuiTableFlags_Borders))
@@ -220,21 +232,31 @@ void ChessWidget::draw_gui()
 
 void ChessWidget::update()
 {
-    for (auto &&animation : animations)
+    // Update each animation using iterators
+    for (auto it = animations.begin(); it != animations.end(); ++it)
     {
-        animation.update();
+        it->second.update();
     }
+
     bool removed = false;
-    for (int i = 0; i < animations.size(); i++)
+
+    // Iterate with erasure of finished animations
+    for (auto it = animations.begin(); it != animations.end();)
     {
-        if (animations[i].is_finished())
+        if (it->second.is_finished())
         {
-            animated.erase(animations[i].get_destination());
-            animations.erase(animations.begin() + i);
-            i--;
+            // Erase from 'animated' set and remove the animation
+            animated.erase(it->second.get_destination());
+            it = animations.erase(it); // 'erase' returns the next valid iterator
             removed = true;
         }
+        else
+        {
+            ++it; // Only increment if not erased
+        }
     }
+
+    // Reload if any animations were removed
     if (removed)
     {
         reload();
@@ -256,8 +278,7 @@ void ChessWidget::undo()
         sprite.setOrigin(sprite.getTextureRect().width / 2.f, sprite.getTextureRect().height / 2.f);
         if (draw_animations)
         {
-            animated.insert(ply.get_source().get_square());
-            animations.push_back(MoveAnimation(animation_speed, reverse, tile_size, sprite));
+            add_animation(animation_speed, reverse, tile_size, sprite);
         }
         moves.pop_back();
         new_move = true;
@@ -270,12 +291,18 @@ void ChessWidget::play_random()
     std::unordered_set<Ply> possible = state.get_possible_plies();
     if (possible.size() != 0)
     {
+        // for (const auto &ply : possible)
+        // {
+        //     std::cout << (ply) << std::endl;
+        // }
+
         int randidx = rand() % possible.size();
         int counter = 0;
         for (auto &&ply : possible)
         {
             if (counter == randidx)
             {
+                std::cout << "Played: " << state.get_algebraic_notation(ply) << " (" << ply << ")" << std::endl;
                 moves.push_back(state.get_algebraic_notation(ply));
                 new_move = true;
 
@@ -288,16 +315,16 @@ void ChessWidget::play_random()
 
                 if (draw_animations)
                 {
-                    animated.insert(ply.get_destination().get_square());
-                    animations.push_back(MoveAnimation(animation_speed, ply, tile_size, sprite));
+                    add_animation(animation_speed, ply, tile_size, sprite);
                 }
 
                 sf::RenderStates states;
-                states.transform.scale(200.0f / (tile_size * 8.0f), 200.0f / (tile_size * 8.0f));
+                float size = 350;
+                states.transform.scale(size / (tile_size * 8.0f), size / (tile_size * 8.0f));
                 states.transform.scale(1.f, -1.f);
                 states.transform.translate(0, -(tile_size * 8.0f));
                 static sf::RenderTexture tool_tip_texture;
-                tool_tip_texture.create(200, 200);
+                tool_tip_texture.create(size, size);
                 tool_tip_texture.setSmooth(true);
                 tool_tip_texture.clear(sf::Color::Green);
 
@@ -312,14 +339,40 @@ void ChessWidget::play_random()
                 tool_tip_texture.display();
                 texure_history.push_back(tool_tip_texture.getTexture());
                 reload();
+                // std::cout << state << std::endl;
+                std::cout << animated.size() << std::endl;
             }
             counter++;
         }
     }
 }
+void ChessWidget::load_fen(const std::string &fen)
+{
+    state = State(fen);
+    reload();
+}
+void ChessWidget::add_animation(float speed, Ply ply, float tile_size, sf::Sprite &sprite)
+{
+    auto result = animations.find(ply.get_source().get_square());
+    if (result != animations.end())
+    {
+        // Overwrite the existing value
+        animations.erase(result);
+        animated.erase(ply.get_source().get_square());
+    }
+    else
+    {
+        // Insert a new value if the key does not exist
+        animated.insert(ply.get_destination().get_square());
+        MoveAnimation animation(speed, ply, tile_size, sprite);
+        auto dest_square = ply.get_destination().get_square();
+        animations.insert(std::make_pair(dest_square, std::move(animation)));
+    }
+}
 
 void ChessWidget::reload()
 {
+    latest_fen = state.to_fen();
     sprites.clear();
     for (uint8_t rank = 0; rank < 8; rank++)
     {
@@ -340,8 +393,6 @@ void ChessWidget::reload()
     }
 }
 
-#include <iostream>
-
 void ChessWidget::mouse_moved(sf::Vector2i position)
 {
     int x = (position.x / tile_size);
@@ -351,8 +402,6 @@ void ChessWidget::mouse_moved(sf::Vector2i position)
     {
         selected_sprite.setPosition(position.x, position.y);
     }
-
-    //std::cout << x << " " << y << std::endl;
 }
 void ChessWidget::mouse_pressed(sf::Vector2i position, sf::Mouse::Button button)
 {
@@ -386,7 +435,14 @@ void ChessWidget::mouse_released(sf::Vector2i position, sf::Mouse::Button button
         if (x >= 0 && x <= 7 && y >= 0 && y <= 7)
         {
             Location location(x, y);
-            Ply ply(selected_piece, selected_location, location);
+            uint8_t promotion_rank = state.get_turn() == Color::White ? 7 : 0;
+            PlyType plytype = PlyType::Normal;
+            if(location.get_rank() == promotion_rank && selected_piece == Piece::Pawn)
+            {
+                plytype = PlyType::PromoteQueen;
+            }
+            Ply ply(selected_piece, selected_location, location, plytype);
+
             if (state.is_possible(ply))
             {
                 moves.push_back(state.get_algebraic_notation(ply));
@@ -395,8 +451,7 @@ void ChessWidget::mouse_released(sf::Vector2i position, sf::Mouse::Button button
                 history.push(ply);
                 if (draw_animations)
                 {
-                    animated.insert(ply.get_destination().get_square());
-                    animations.push_back(MoveAnimation(animation_speed, ply, tile_size, selected_sprite));
+                    add_animation(animation_speed, ply, tile_size, selected_sprite);
                 }
             }
             selected_location = Location();

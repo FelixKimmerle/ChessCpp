@@ -13,4 +13,4 @@ enum Piece : uint8_t
     Empty,
 };
 
-const char characters[] = {'Q', 'N', 'B', 'R', 'P', 'K'};
+const char characters[] = {'Q', 'N', 'B', 'R', 'P', 'K', 'A'};
