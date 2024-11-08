@@ -9,3 +9,5 @@ char to_char(Color color)
 {
     return (color == White) ? 'w' : 'b';
 }
+
+const char* colorNames[] = { "White", "Black", "NoColor" };

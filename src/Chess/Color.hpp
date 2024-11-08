@@ -11,3 +11,6 @@ enum Color : uint8_t
 
 Color other_color(Color color);
 char to_char(Color color);
+
+extern const char* colorNames[];
+constexpr int colorNamesSize = 3;

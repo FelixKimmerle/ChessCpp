@@ -9,18 +9,57 @@
 
 static const std::string piece_names[] = {"queen", "knight", "bishop", "rook", "pawn", "king"};
 
+void ChessWidget::render_history()
+{
+    sf::RenderStates states;
+    float size = 350;
+    states.transform.scale(size / (tile_size * 8.0f), size / (tile_size * 8.0f));
+    states.transform.scale(1.f, -1.f);
+    states.transform.translate(0, -(tile_size * 8.0f));
+    static sf::RenderTexture tool_tip_texture;
+    tool_tip_texture.create(size, size);
+    tool_tip_texture.setSmooth(true);
+    tool_tip_texture.clear(sf::Color::Green);
+
+    bool old_draw_animations = draw_animations;
+    bool old_draw_text = draw_text;
+    bool old_show_bitmap = show_bitmap;
+    draw_animations = false;
+    draw_text = false;
+    show_bitmap = false;
+    Location old_selected_location = selected_location;
+    selected_location = Location();
+    reload();
+    tool_tip_texture.draw(*this, states);
+    draw_animations = old_draw_animations;
+    draw_text = old_draw_text;
+    tool_tip_texture.display();
+    texure_history.push_back(tool_tip_texture.getTexture());
+    selected_location = old_selected_location;
+    show_bitmap = old_show_bitmap;
+    reload();
+}
+
 ChessWidget::ChessWidget(float size) : light_square(sf::Quads, 4),
                                        dark_square(sf::Quads, 4),
                                        light_square_color{165.f / 255.f, 106.f / 255.f, 23.f / 255.f},
                                        dark_square_color{86.f / 255.f, 38.f / 255.f, 20.f / 255.f},
                                        text_color{126.f / 255.f, 255.f / 255.f, 251.f / 255.f},
-                                    //    state("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"),
-                                       state("3q4/4P1P1/8/8/8/8/4p1p1/8 w - - 0 1"),
+                                       //    state("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"),
+                                    //    state("3q4/4P1P1/8/8/8/8/4p1p1/8 w - - 0 1"),
+                                        state("4q3/8/8/8/4R3/8/8/4K3 w "),
                                        selected_piece(Empty),
+                                       selected_color(Color::NoColor),
                                        new_move(true),
                                        draw_text(true),
                                        draw_animations(true),
-                                       animation_speed(0.5f)
+                                       animation_speed(0.5f),
+                                       edit(false),
+                                       edit_color(Color::White),
+                                       show_bitmap(false),
+                                       selected_bitmap(7),
+                                       displayed_bitmap(0),
+                                       bitmap_color(Color::White)
 {
     sf::Color light_color(light_square_color[0] * 255, light_square_color[1] * 255, light_square_color[2] * 255);
     sf::Color dark_color(dark_square_color[0] * 255, dark_square_color[1] * 255, dark_square_color[2] * 255);
@@ -73,6 +112,7 @@ void ChessWidget::draw(sf::RenderTarget &target, sf::RenderStates states) const
         for (uint8_t x = 0; x < 8; x++)
         {
             states.transform.translate(sf::Vector2f(tile_size * x, tile_size * y));
+
             if ((x + y % 2) % 2 == 0)
             {
                 target.draw(light_square, states);
@@ -81,6 +121,28 @@ void ChessWidget::draw(sf::RenderTarget &target, sf::RenderStates states) const
             {
                 target.draw(dark_square, states);
             }
+
+            if (show_bitmap)
+            {
+                target.draw(light_square, states);
+                Location loc(x, y);
+
+                sf::RectangleShape rect;
+                constexpr float fact = 1.0;
+                constexpr float fact_rest = (1.0 - fact) / 2.0;
+                rect.setSize(sf::Vector2f(tile_size * fact, tile_size * fact));
+                rect.setPosition(sf::Vector2f(tile_size * fact_rest, tile_size * fact_rest));
+                rect.setFillColor(sf::Color(0, 0, 0, 128));
+                rect.setOutlineColor(sf::Color::Black);
+                rect.setOutlineThickness(-tile_size * 0.05);
+
+                if (displayed_bitmap.is_set(loc))
+                {
+                    rect.setFillColor(sf::Color(255, 255, 255, 128));
+                }
+                target.draw(rect, states);
+            }
+
             states = orig_state;
         }
     }
@@ -186,6 +248,38 @@ void ChessWidget::draw_gui()
     {
         ImGui::SliderFloat("Time", &animation_speed, 0.01f, 1.0f);
     }
+
+    ImGui::Checkbox("Edit mode", &edit);
+    if (edit)
+    {
+        int colorIndex = static_cast<int>(edit_color);
+        if (ImGui::Combo("Select Color", &colorIndex, colorNames, colorNamesSize - 1))
+        {
+            edit_color = static_cast<Color>(colorIndex);
+        }
+    }
+
+    ImGui::Checkbox("Bitmaps", &show_bitmap);
+    if (show_bitmap)
+    {
+        int colorIndex = static_cast<int>(bitmap_color);
+        if (ImGui::Combo("Color###1", &colorIndex, colorNames, colorNamesSize - 1))
+        {
+            bitmap_color = static_cast<Color>(colorIndex);
+        }
+        if (ImGui::Combo("Bitmap", &selected_bitmap, pieceNames, pieceNamesSize))
+        {
+        }
+        if (selected_bitmap <= Piece::Empty)
+        {
+            displayed_bitmap = state.get_mask(bitmap_color, selected_bitmap);
+        }
+        else if (selected_bitmap == 7)
+        {
+            displayed_bitmap = state.calculate_attack_mask(bitmap_color);
+        }
+    }
+
     static char buffer[1024];
     snprintf(buffer, sizeof(buffer), "%s", latest_fen.c_str());
     ImGui::InputText("Fen: ", buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
@@ -318,27 +412,7 @@ void ChessWidget::play_random()
                     add_animation(animation_speed, ply, tile_size, sprite);
                 }
 
-                sf::RenderStates states;
-                float size = 350;
-                states.transform.scale(size / (tile_size * 8.0f), size / (tile_size * 8.0f));
-                states.transform.scale(1.f, -1.f);
-                states.transform.translate(0, -(tile_size * 8.0f));
-                static sf::RenderTexture tool_tip_texture;
-                tool_tip_texture.create(size, size);
-                tool_tip_texture.setSmooth(true);
-                tool_tip_texture.clear(sf::Color::Green);
-
-                bool old_draw_animations = draw_animations;
-                bool old_draw_text = draw_text;
-                draw_animations = false;
-                draw_text = false;
-                reload();
-                tool_tip_texture.draw(*this, states);
-                draw_animations = old_draw_animations;
-                draw_text = old_draw_text;
-                tool_tip_texture.display();
-                texure_history.push_back(tool_tip_texture.getTexture());
-                reload();
+                render_history();
                 // std::cout << state << std::endl;
                 std::cout << animated.size() << std::endl;
             }
@@ -405,23 +479,86 @@ void ChessWidget::mouse_moved(sf::Vector2i position)
 }
 void ChessWidget::mouse_pressed(sf::Vector2i position, sf::Mouse::Button button)
 {
+
     int x = (position.x / tile_size);
     int y = (position.y / tile_size);
 
     if (x >= 0 && x <= 7 && y >= 0 && y <= 7)
     {
         Location location(x, y);
-        Color color = state.get_color(location);
-        if (color == state.get_turn())
+        if (!edit)
         {
-            selected_piece = state.get_piece(location, color);
-            std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
-            selected_location = Location(x, y);
-            selected_sprite = sf::Sprite(textures[2 * selected_piece + color]);
-            selected_sprite.scale(tile_size / selected_sprite.getTexture()->getSize().x * 0.7f, tile_size / selected_sprite.getTexture()->getSize().y * 0.7f);
-            selected_sprite.setOrigin(selected_sprite.getTextureRect().width / 2.f, selected_sprite.getTextureRect().height / 2.f);
-            selected_sprite.setPosition(tile_size * x + tile_size / 2, tile_size * y + tile_size / 2);
-            reload();
+            Color color = state.get_color(location);
+            if (color == state.get_turn())
+            {
+                selected_piece = state.get_piece(location, color);
+                selected_color = color;
+                std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
+                selected_location = Location(x, y);
+                selected_sprite = sf::Sprite(textures[2 * selected_piece + color]);
+                selected_sprite.scale(tile_size / selected_sprite.getTexture()->getSize().x * 0.7f, tile_size / selected_sprite.getTexture()->getSize().y * 0.7f);
+                selected_sprite.setOrigin(selected_sprite.getTextureRect().width / 2.f, selected_sprite.getTextureRect().height / 2.f);
+                selected_sprite.setPosition(tile_size * x + tile_size / 2, tile_size * y + tile_size / 2);
+                reload();
+            }
+        }
+        else
+        {
+            if (button == sf::Mouse::Button::Right)
+            {
+                std::cout << "delete!" << std::endl;
+                state.set(location, Piece::Empty);
+                reload();
+            }
+            else if (button == sf::Mouse::Button::Left)
+            {
+                Piece piece = Piece::Empty;
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
+                {
+                    piece = Piece::Queen;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N))
+                {
+                    piece = Piece::Knight;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::B))
+                {
+                    piece = Piece::Bishop;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
+                {
+                    piece = Piece::Rook;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
+                {
+                    piece = Piece::Pawn;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::K))
+                {
+                    piece = Piece::King;
+                }
+                if (piece != Piece::Empty)
+                {
+                    state.set(location, piece, edit_color);
+                    reload();
+                }
+                else
+                {
+                    Color color = state.get_color(location);
+                    if (color != Color::NoColor)
+                    {
+                        selected_piece = state.get_piece(location, color);
+                        selected_color = color;
+                        std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
+                        selected_location = Location(x, y);
+                        selected_sprite = sf::Sprite(textures[2 * selected_piece + color]);
+                        selected_sprite.scale(tile_size / selected_sprite.getTexture()->getSize().x * 0.7f, tile_size / selected_sprite.getTexture()->getSize().y * 0.7f);
+                        selected_sprite.setOrigin(selected_sprite.getTextureRect().width / 2.f, selected_sprite.getTextureRect().height / 2.f);
+                        selected_sprite.setPosition(tile_size * x + tile_size / 2, tile_size * y + tile_size / 2);
+                        reload();
+                    }
+                }
+            }
         }
     }
 }
@@ -437,13 +574,13 @@ void ChessWidget::mouse_released(sf::Vector2i position, sf::Mouse::Button button
             Location location(x, y);
             uint8_t promotion_rank = state.get_turn() == Color::White ? 7 : 0;
             PlyType plytype = PlyType::Normal;
-            if(location.get_rank() == promotion_rank && selected_piece == Piece::Pawn)
+            if (location.get_rank() == promotion_rank && selected_piece == Piece::Pawn)
             {
                 plytype = PlyType::PromoteQueen;
             }
             Ply ply(selected_piece, selected_location, location, plytype);
 
-            if (state.is_possible(ply))
+            if (state.is_possible(ply) && !edit)
             {
                 moves.push_back(state.get_algebraic_notation(ply));
                 new_move = true;
@@ -453,10 +590,44 @@ void ChessWidget::mouse_released(sf::Vector2i position, sf::Mouse::Button button
                 {
                     add_animation(animation_speed, ply, tile_size, selected_sprite);
                 }
+                render_history();
+            }
+            else if(edit)
+            {
+                state.set(selected_location, Piece::Empty);
+                state.set(location, selected_piece, selected_color);
             }
             selected_location = Location();
             selected_piece = Empty;
+            selected_color = Color::NoColor;
             reload();
         }
+    }
+}
+
+void ChessWidget::keyboard_event(sf::Event::KeyEvent event)
+{
+    if (edit)
+    {
+        if (event.code == sf::Keyboard::W)
+        {
+            if(edit_color == Color::White)
+            {
+                edit_color = Color::Black;
+            }
+            else
+            {
+                edit_color = Color::White;
+            }
+        }
+        else if (event.code == sf::Keyboard::Delete)
+        {
+            state.reset();
+            reload();
+        }
+    }
+    if (event.code == sf::Keyboard::E)
+    {
+        edit = !edit;
     }
 }

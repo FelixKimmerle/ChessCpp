@@ -55,7 +55,6 @@ private:
     void calculate_possible_plies_king(std::unordered_set<Ply> &possible_plies, Color color, Mask attack_mask) const;
 
     void recalculate_masks();
-    Mask calculate_attack_mask(Color player);
     /*
         1. turn (0 - white, 1 - black)
         2. white is allowed long castling
@@ -94,6 +93,12 @@ public:
     std::unordered_set<Ply> get_possible_plies()const;
 
     std::string to_fen() const;
+    void reset();
+    Mask get_mask(Color color, uint8_t bitmap)const;
+    Mask calculate_attack_mask(Color player);
+    Mask calculate_pinned_pieces(Color player);
+
 
     friend std::ostream &operator<<(std::ostream &os, const State &board);
 };
+

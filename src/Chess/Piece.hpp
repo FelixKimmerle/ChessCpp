@@ -14,3 +14,6 @@ enum Piece : uint8_t
 };
 
 const char characters[] = {'Q', 'N', 'B', 'R', 'P', 'K', 'A'};
+
+extern const char* pieceNames[];
+constexpr int pieceNamesSize = 8;

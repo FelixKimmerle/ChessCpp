@@ -25,6 +25,7 @@ private:
 
     Location selected_location;
     Piece selected_piece;
+    Color selected_color;
     sf::Sprite selected_sprite;
 
     std::map<uint8_t,MoveAnimation> animations;
@@ -47,6 +48,16 @@ private:
     std::stack<Ply> history;
 
     std::string latest_fen;
+    bool edit;
+    Color edit_color;
+
+    bool show_bitmap;
+    int selected_bitmap;
+    Mask displayed_bitmap;
+    Color bitmap_color;
+
+    void render_history();
+
 public:
     ChessWidget(float size);
     ~ChessWidget();
@@ -61,5 +72,6 @@ public:
     void mouse_moved(sf::Vector2i position);
     void mouse_pressed(sf::Vector2i position, sf::Mouse::Button button);
     void mouse_released(sf::Vector2i position, sf::Mouse::Button button);
+    void keyboard_event(sf::Event::KeyEvent event);
 
 };

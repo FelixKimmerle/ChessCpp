@@ -293,6 +293,22 @@ void State::recalculate_masks()
     occupied_right = occupied.rotate_right_45();
 }
 
+Mask State::calculate_pinned_pieces(Color player)
+{
+    Mask pinned_pieces;
+    Mask queens = pieces[player][QUEEN_POSITION];
+    while (!queens.is_zero())
+    {
+        Location location = queens.get_next_location();
+        Mask bishop_moves = table.get_bishop_attack(occupied_left, occupied_right, 0, location);
+        Mask rook_moves = table.get_rook_attack(occupied, occupied_flipped, 0, location);
+        // king_rays |= bishop_moves;
+        // king_rays |= rook_moves;
+    }
+
+    return pinned_pieces;
+}
+
 Mask State::calculate_attack_mask(Color player)
 {
     Mask attack_mask;
@@ -440,13 +456,18 @@ void State::undo_ply(Ply ply)
 
     Location source = reverse.get_source();
     Location destination = reverse.get_destination();
-    uint8_t mask_index = static_cast<uint8_t>(reverse.get_piece());
+    uint8_t mask_index_destinaton = static_cast<uint8_t>(reverse.get_piece());
+    uint8_t mask_index_source = mask_index_destinaton;
+    if (ply.is_promotion())
+    {
+        mask_index_source = static_cast<uint8_t>(ply.get_ply_type());
+    }
 
-    assert(pieces[turn][mask_index].is_set(source));
-    assert(!pieces[turn][mask_index].is_set(destination));
+    assert(pieces[turn][mask_index_source].is_set(source));
+    assert(!pieces[turn][mask_index_destinaton].is_set(destination));
 
-    pieces[turn][mask_index].set(destination);
-    pieces[turn][mask_index].reset(source);
+    pieces[turn][mask_index_source].reset(source);
+    pieces[turn][mask_index_destinaton].set(destination);
 
     for (uint8_t i = 0; i < ALL_POSITION; i++)
     {
@@ -542,6 +563,7 @@ void State::set(Location location, Piece piece, Color color)
     pieces[color][piece].set(location);
 
     recalculate_masks();
+    caluclate_possible_plies();
 }
 
 std::string State::to_fen() const
@@ -593,6 +615,34 @@ std::string State::to_fen() const
     ss << " " << to_char(turn) << " ";
 
     return ss.str();
+}
+
+void State::reset()
+{
+    state_info = StateInfo();
+    while (!info_history.empty())
+    {
+        info_history.pop();
+    }
+
+    for (uint8_t i = 0; i <= ALL_POSITION; i++)
+    {
+        pieces[Color::White][i] = 0;
+        pieces[Color::Black][i] = 0;
+    }
+
+    occupied = 0;
+    occupied_flipped = 0;
+    occupied_left = 0;
+    occupied_right = 0;
+    turn = Color::White;
+    enpasant = 0;
+    possible_plies.clear();
+}
+
+Mask State::get_mask(Color color, uint8_t bitmap) const
+{
+    return pieces[color][bitmap];
 }
 
 // also slow but this is ok just dont use it in move generation

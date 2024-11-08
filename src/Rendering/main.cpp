@@ -58,6 +58,10 @@ int main()
                 {
                     chess_widget.play_random();
                 }
+                else
+                {
+                    chess_widget.keyboard_event(event.key);
+                }
             }
             else if (event.type == sf::Event::Resized)
             {
