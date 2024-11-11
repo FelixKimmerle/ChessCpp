@@ -65,7 +65,7 @@ private:
         9 - 11 last move destination
         12 - 15 pawn in case of promotion
     */
-    char get_pawn_char(uint8_t color);
+    // char get_pawn_char(uint8_t color);
     void background(uint8_t x, uint8_t y, std::ostream &os) const;
     void print_line_pieces(uint8_t y, std::ostream &os) const;
     void print_piece(uint8_t y, uint8_t x, std::ostream &os) const;

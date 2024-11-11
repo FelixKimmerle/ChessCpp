@@ -14,7 +14,7 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MD -MP -Wall -Wextra #-Wfloat-equal -Wundef -Wunreachable-code -Wcast-qual
-LDFLAGS ?= -lsfml-system -lsfml-window -lsfml-graphics -lGL
+LDFLAGS_INTERN ?= $(LDFLAGS) -lsfml-graphics -lsfml-window -lsfml-system -lGL
 
 #
 # Debug build settings
@@ -41,7 +41,7 @@ release: $(RELEXE)
 
 $(RELEXE): $(RELOBJS)
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(RELOBJS) -o $@ $(LDFLAGS)
+	$(CC) $(RELOBJS) -o $@ $(LDFLAGS_INTERN)
 
 $(RELDIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
@@ -52,7 +52,7 @@ debug: $(DBGEXE)
 
 $(DBGEXE): $(DBGOBJS)
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(DBGOBJS) -o $@ $(LDFLAGS)
+	$(CC) $(DBGOBJS) -o $@ $(LDFLAGS_INTERN)
 
 $(DBGDIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
