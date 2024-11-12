@@ -40,6 +40,7 @@ private:
     std::unordered_set<Ply> possible_plies;
     const static LookupTable table;
     Mask enpasant;
+    Mask opponent_attack_mask;
 
     Mask white_push_targets(Mask pawns, Mask empty) const;
     Mask black_push_targets(Mask pawns, Mask empty) const;
@@ -74,7 +75,6 @@ private:
 
     void calculate_moves(std::unordered_set<Ply> &possible_plies, Piece piece, Color color) const;
 
-    StateInfo state_info;
     std::stack<StateInfo> info_history;
 
 public:
@@ -97,6 +97,8 @@ public:
     Mask get_mask(Color color, uint8_t bitmap)const;
     Mask calculate_attack_mask(Color player);
     Mask calculate_pinned_pieces(Color player);
+    bool check()const;
+    bool check_mate()const;
 
 
     friend std::ostream &operator<<(std::ostream &os, const State &board);

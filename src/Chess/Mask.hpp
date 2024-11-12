@@ -3,6 +3,7 @@
 #include <ostream>
 #include "Location.hpp"
 #include "Line.hpp"
+#include "MultiDimArray.hpp"
 
 static const unsigned char MaskTable[] = {
     0b00000001,
@@ -100,6 +101,7 @@ public:
     void set(Location location);
     void reset(Location location);
     Line get_line(uint8_t index) const;
+    Line get_column(uint8_t index)const;
     Line get_diagonal(uint8_t index) const;
     Line get_anti_diagonal(uint8_t index) const;
 
@@ -135,6 +137,7 @@ static const Mask RANK_6 = 0x0000FF0000000000ull;
 static const Mask RANK_7 = 0x00FF000000000000ull;
 static const Mask RANK_8 = 0xFF00000000000000ull;
 
+
 const Mask FILE_A = 0x0101010101010101ull;
 const Mask FILE_B = 0x0202020202020202ull;
 const Mask FILE_C = 0x0404040404040404ull;
@@ -165,6 +168,7 @@ static const Mask files[] = {
     FILE_G,
     FILE_H,
 };
+
 
 static const Mask WHITE_SQUARES = 0x55AA55AA55AA55AAull;
 static const Mask BLACK_SQUARES = 0xAA55AA55AA55AA55ull;

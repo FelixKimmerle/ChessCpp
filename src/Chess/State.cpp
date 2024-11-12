@@ -128,7 +128,7 @@ void State::calculate_possible_plies_pawns(std::unordered_set<Ply> &possible_pli
     // pawn pushes
     Mask single_push_targets;
     Mask double_push_targets;
-    uint8_t offset = UINT8_MAX; // aka -1
+    uint8_t offset = UINT8_MAX; // = -1
     uint8_t promotion_rank = color == Color::White ? 7 : 0;
 
     if (color == White)
@@ -291,22 +291,62 @@ void State::recalculate_masks()
 
     occupied_left = occupied.rotate_left_45();
     occupied_right = occupied.rotate_right_45();
+
+    opponent_attack_mask = calculate_attack_mask(other_color(turn));
 }
 
 Mask State::calculate_pinned_pieces(Color player)
 {
     Mask pinned_pieces;
-    Mask queens = pieces[player][QUEEN_POSITION];
-    while (!queens.is_zero())
+    Mask kings = pieces[player][QUEEN_POSITION];
+    while (!kings.is_zero())
     {
-        Location location = queens.get_next_location();
-        Mask bishop_moves = table.get_bishop_attack(occupied_left, occupied_right, 0, location);
-        Mask rook_moves = table.get_rook_attack(occupied, occupied_flipped, 0, location);
+        Location location = kings.get_next_location();
+        //Mask bishop_moves = table.get_bishop_attack(occupied_left, occupied_right, 0, location);
+        //Mask rook_moves = table.get_rook_attack(occupied, occupied_flipped, 0, location);
         // king_rays |= bishop_moves;
         // king_rays |= rook_moves;
+
+        // std::cout << "diag: " << (int)diag << std::endl;
+        // std::cout << "anti diag: " << (int)anti_diag << std::endl;
+        // Color opponent_color = other_color(turn);
+        // Mask opponent_diag_sliders = pieces[opponent_color][QUEEN_POSITION] | pieces[opponent_color][BISHOP_POSITION];
+        // Mask opponent_straight_sliders = pieces[opponent_color][QUEEN_POSITION] | pieces[opponent_color][ROOK_POSITION];
+        // // pieces[opponent_color][QUEEN_POSITION].get_line
+        // Mask opponent_straight_sliders_flittped = opponent_straight_sliders.flip_anti_diag();
+        // Mask own = pieces[turn][ALL_POSITION];
+        // Mask own_flipped = pieces[turn][ALL_POSITION].flip_anti_diag();
+
+        // uint8_t file = location.get_file();
+        // Line occupied_file = opponent_straight_sliders_flittped.get_line(file);
+
+        // uint8_t rank = position.get_rank();
+        // Line occupied_rank = occupied.get_line(rank);
+
+        // Mask occupied_left_opponent = pieces[other_color(turn)][ALL_POSITION].rotate_left_45();
+        // Mask occupied_right_opponent = occupied.rotate_right_45();
+
+        // uint8_t diag = location.get_diagonal();
+        // uint8_t anti_diag = location.get_anti_diagonal();
+
+        // Line diag_occupied_opponent = occupied_left_opponent.get_diagonal(diag);
+        // Line anti_diag_occupied = occupied_right_opponent.get_anti_diagonal(anti_diag);
+
+        // std::cout << "diag_occupied_opponent: " << std::endl;
+        // std::cout << diag_occupied_opponent << std::endl;
     }
 
     return pinned_pieces;
+}
+
+bool State::check() const
+{
+    return false;
+}
+
+bool State::check_mate() const
+{
+    return false;
 }
 
 Mask State::calculate_attack_mask(Color player)
@@ -377,18 +417,17 @@ Mask State::calculate_attack_mask(Color player)
 
 void State::caluclate_possible_plies()
 {
-    Mask attack_mask = calculate_attack_mask(other_color(turn));
-    std::cout << to_char(other_color(turn)) << std::endl;
-    std::cout << attack_mask << std::endl;
-    std::cout << to_char(turn) << std::endl;
-    std::cout << calculate_attack_mask(turn) << std::endl;
+    // std::cout << to_char(other_color(turn)) << std::endl;
+    // std::cout << opponent_attack_mask << std::endl;
+    // std::cout << to_char(turn) << std::endl;
+    // std::cout << calculate_attack_mask(turn) << std::endl;
     possible_plies.clear();
     calculate_possible_plies_pawns(possible_plies, turn);
     calculate_possible_plies_rook(possible_plies, turn);
     calculate_possible_plies_knight(possible_plies, turn);
     calculate_possible_plies_bishop(possible_plies, turn);
     calculate_possible_plies_queen(possible_plies, turn);
-    calculate_possible_plies_king(possible_plies, turn, attack_mask);
+    calculate_possible_plies_king(possible_plies, turn, opponent_attack_mask);
 
     /*
     for (Ply ply : possible_plies)
@@ -436,13 +475,12 @@ void State::execute_ply(Ply ply)
         }
         pieces[other_color(turn)][i].reset(destination);
     }
-
+    StateInfo state_info;
     state_info.set_captured_piece(changed);
     info_history.push(state_info);
 
-    recalculate_masks();
-
     turn = other_color(turn);
+    recalculate_masks();
 
     // std::cout << *this << std::endl;
 
@@ -474,7 +512,7 @@ void State::undo_ply(Ply ply)
         pieces[other_color(turn)][i].reset(destination);
     }
 
-    state_info = info_history.top();
+    StateInfo state_info = info_history.top();
     info_history.pop();
     Piece captured_piece = state_info.get_captured_piece();
     if (captured_piece != Empty)
@@ -619,7 +657,6 @@ std::string State::to_fen() const
 
 void State::reset()
 {
-    state_info = StateInfo();
     while (!info_history.empty())
     {
         info_history.pop();

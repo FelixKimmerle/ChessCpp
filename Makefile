@@ -2,7 +2,7 @@ TARGET_EXEC ?= Chess
 
 BUILD_DIR ?= ./build
 SRC_DIRS ?= src/
-CC = g++
+CCX = g++ 
 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 #OBJS := $(SRCS:%=%.o)
@@ -13,7 +13,7 @@ DEPS = $(shell find build/ -name *.d)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CPPFLAGS ?= $(INC_FLAGS) -MMD -MD -MP -Wall -Wextra #-Wfloat-equal -Wundef -Wunreachable-code -Wcast-qual
+CPPFLAGS ?= $(INC_FLAGS) -std=c++17 -MMD -MD -MP -Wall -Wextra #-Wfloat-equal -Wundef -Wunreachable-code -Wcast-qual
 LDFLAGS_INTERN ?= $(LDFLAGS) -lsfml-graphics -lsfml-window -lsfml-system -lGL
 
 #
@@ -41,7 +41,7 @@ release: $(RELEXE)
 
 $(RELEXE): $(RELOBJS)
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(RELOBJS) -o $@ $(LDFLAGS_INTERN)
+	$(CCX) $(RELOBJS) -o $@ $(LDFLAGS_INTERN)
 
 $(RELDIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)
@@ -52,7 +52,7 @@ debug: $(DBGEXE)
 
 $(DBGEXE): $(DBGOBJS)
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(DBGOBJS) -o $@ $(LDFLAGS_INTERN)
+	$(CCX) $(DBGOBJS) -o $@ $(LDFLAGS_INTERN)
 
 $(DBGDIR)/%.cpp.o: %.cpp
 	$(MKDIR_P) $(dir $@)

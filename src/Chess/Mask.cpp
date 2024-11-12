@@ -111,7 +111,20 @@ Line Mask::get_line(uint8_t index) const
     assert(index < 8);
     return (mask >> (index << 3)) & UINT8_MAX;
 }
-#include <iostream>
+Line Mask::get_column(uint8_t index) const
+{
+    assert(index < 8); // Ensure the index is within the 0-7 range for columns
+    uint8_t column = 0;
+
+    // Extract each row's bit from the specified column and set it in the Line result
+    for (uint8_t row = 0; row < 8; ++row)
+    {
+        uint8_t bit = (mask >> (row * 8 + index)) & 1; // Get the bit at (row, index)
+        column |= (bit << row); // Set this bit in the correct position in `column`
+    }
+
+    return column; // Return the packed 8-bit column as a Line
+}
 
 Line Mask::get_diagonal(uint8_t index) const
 {
