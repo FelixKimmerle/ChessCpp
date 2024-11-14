@@ -46,8 +46,9 @@ ChessWidget::ChessWidget(float size) : light_square(sf::Quads, 4),
                                        dark_square_color{86.f / 255.f, 38.f / 255.f, 20.f / 255.f},
                                        text_color{126.f / 255.f, 255.f / 255.f, 251.f / 255.f},
                                        //    state("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2"),
-                                    //    state("3q4/4P1P1/8/8/8/8/4p1p1/8 w - - 0 1"),
-                                        state("4q3/8/8/8/4R3/8/8/4K3 w "),
+                                       //    state("3q4/4P1P1/8/8/8/8/4p1p1/8 w - - 0 1"),
+                                       //    state("4q3/8/8/8/4R3/8/8/4K3 w "),
+                                       state("8/8/3k4/8/8/8/3R4/8 b KQkq - 0 1"),
                                        selected_piece(Empty),
                                        selected_color(Color::NoColor),
                                        new_move(true),
@@ -59,7 +60,9 @@ ChessWidget::ChessWidget(float size) : light_square(sf::Quads, 4),
                                        show_bitmap(false),
                                        selected_bitmap(7),
                                        displayed_bitmap(0),
-                                       bitmap_color(Color::White)
+                                       bitmap_color(Color::White),
+                                       check(false),
+                                       check_mate(false)
 {
     sf::Color light_color(light_square_color[0] * 255, light_square_color[1] * 255, light_square_color[2] * 255);
     sf::Color dark_color(dark_square_color[0] * 255, dark_square_color[1] * 255, dark_square_color[2] * 255);
@@ -206,122 +209,151 @@ void ChessWidget::resize(float size)
 
 void ChessWidget::draw_gui()
 {
-    if (ImGui::ColorEdit3("Light color", light_square_color))
+    if (ImGui::BeginTabBar("Test"))
     {
-        sf::Color light_color(light_square_color[0] * 255, light_square_color[1] * 255, light_square_color[2] * 255);
-
-        light_square[0].color = light_color;
-        light_square[1].color = light_color;
-        light_square[2].color = light_color;
-        light_square[3].color = light_color;
-    }
-    if (ImGui::ColorEdit3("Dark color", dark_square_color))
-    {
-        sf::Color dark_color(dark_square_color[0] * 255, dark_square_color[1] * 255, dark_square_color[2] * 255);
-
-        dark_square[0].color = dark_color;
-        dark_square[1].color = dark_color;
-        dark_square[2].color = dark_color;
-        dark_square[3].color = dark_color;
-    }
-    if (draw_text)
-    {
-        if (ImGui::ColorEdit3("Text color", text_color))
+        if (ImGui::BeginTabItem("General"))
         {
-            sf::Color color(text_color[0] * 255, text_color[1] * 255, text_color[2] * 255);
-
-            for (uint8_t i = 0; i < 64; i++)
+            if (ImGui::ColorEdit3("Light color", light_square_color))
             {
-                texts[i].setFillColor(color);
+                sf::Color light_color(light_square_color[0] * 255, light_square_color[1] * 255, light_square_color[2] * 255);
+
+                light_square[0].color = light_color;
+                light_square[1].color = light_color;
+                light_square[2].color = light_color;
+                light_square[3].color = light_color;
             }
-        }
-    }
-    ImGui::Checkbox("Draw Text", &draw_text);
-
-    if (ImGui::Checkbox("Draw Animations", &draw_animations))
-    {
-        animations.clear();
-        animated.clear();
-        reload();
-    }
-    if (draw_animations)
-    {
-        ImGui::SliderFloat("Time", &animation_speed, 0.01f, 1.0f);
-    }
-
-    ImGui::Checkbox("Edit mode", &edit);
-    if (edit)
-    {
-        int colorIndex = static_cast<int>(edit_color);
-        if (ImGui::Combo("Select Color", &colorIndex, colorNames, colorNamesSize - 1))
-        {
-            edit_color = static_cast<Color>(colorIndex);
-        }
-    }
-
-    ImGui::Checkbox("Bitmaps", &show_bitmap);
-    if (show_bitmap)
-    {
-        int colorIndex = static_cast<int>(bitmap_color);
-        if (ImGui::Combo("Color###1", &colorIndex, colorNames, colorNamesSize - 1))
-        {
-            bitmap_color = static_cast<Color>(colorIndex);
-        }
-        if (ImGui::Combo("Bitmap", &selected_bitmap, pieceNames, pieceNamesSize))
-        {
-        }
-        if (selected_bitmap <= Piece::Empty)
-        {
-            displayed_bitmap = state.get_mask(bitmap_color, selected_bitmap);
-        }
-        else if (selected_bitmap == 7)
-        {
-            displayed_bitmap = state.calculate_attack_mask(bitmap_color);
-        }
-    }
-
-    static char buffer[1024];
-    snprintf(buffer, sizeof(buffer), "%s", latest_fen.c_str());
-    ImGui::InputText("Fen: ", buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
-
-    ImGui::Text("Moves:");
-    if (ImGui::BeginTable("Header", 2, ImGuiTableFlags_Borders))
-    {
-        ImGui::TableNextColumn();
-        ImGui::Text("White");
-        ImGui::TableNextColumn();
-        ImGui::Text("Black");
-        ImGui::EndTable();
-    }
-    uint32_t counter = 0;
-    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8, 8));
-    if (ImGui::BeginTable("Moves", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
-    {
-        for (auto it = moves.begin(); it != moves.end(); it++)
-        {
-            if (counter % 2 == 0)
+            if (ImGui::ColorEdit3("Dark color", dark_square_color))
             {
-                ImGui::TableNextRow();
-            }
-            ImGui::TableNextColumn();
-            ImGui::Text(it->c_str());
+                sf::Color dark_color(dark_square_color[0] * 255, dark_square_color[1] * 255, dark_square_color[2] * 255);
 
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                ImGui::Image(texure_history[counter]);
-                ImGui::EndTooltip();
+                dark_square[0].color = dark_color;
+                dark_square[1].color = dark_color;
+                dark_square[2].color = dark_color;
+                dark_square[3].color = dark_color;
             }
-            counter++;
+            if (draw_text)
+            {
+                if (ImGui::ColorEdit3("Text color", text_color))
+                {
+                    sf::Color color(text_color[0] * 255, text_color[1] * 255, text_color[2] * 255);
+
+                    for (uint8_t i = 0; i < 64; i++)
+                    {
+                        texts[i].setFillColor(color);
+                    }
+                }
+            }
+            ImGui::Checkbox("Draw Text", &draw_text);
+
+            if (ImGui::Checkbox("Draw Animations", &draw_animations))
+            {
+                animations.clear();
+                animated.clear();
+                reload();
+            }
+            if (draw_animations)
+            {
+                ImGui::SliderFloat("Time", &animation_speed, 0.01f, 1.0f);
+            }
+
+            ImGui::Checkbox("Edit mode", &edit);
+            if (edit)
+            {
+                int colorIndex = static_cast<int>(edit_color);
+                if (ImGui::Combo("Select Color", &colorIndex, colorNames, colorNamesSize - 1))
+                {
+                    edit_color = static_cast<Color>(colorIndex);
+                }
+            }
+
+            ImGui::Checkbox("Bitmaps", &show_bitmap);
+            if (show_bitmap)
+            {
+                int colorIndex = static_cast<int>(bitmap_color);
+                if (ImGui::Combo("Color###1", &colorIndex, colorNames, colorNamesSize - 1))
+                {
+                    bitmap_color = static_cast<Color>(colorIndex);
+                }
+                if (ImGui::Combo("Bitmap", &selected_bitmap, pieceNames, pieceNamesSize))
+                {
+                }
+                if (selected_bitmap <= Piece::Empty)
+                {
+                    displayed_bitmap = state.get_mask(bitmap_color, selected_bitmap);
+                }
+                else if (selected_bitmap == 7)
+                {
+                    displayed_bitmap = state.calculate_attack_mask(bitmap_color);
+                }
+            }
+
+            static char buffer[1024];
+            snprintf(buffer, sizeof(buffer), "%s", latest_fen.c_str());
+            ImGui::InputText("Fen ", buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
+            check = state.is_check();
+            ImGui::Checkbox("Check", &check);
+            check_mate = state.is_check_mate();
+            ImGui::Checkbox("Check mate", &check_mate);
+
+            ImGui::Text("Moves:");
+            if (ImGui::BeginTable("Header", 2, ImGuiTableFlags_Borders))
+            {
+                ImGui::TableNextColumn();
+                ImGui::Text("White");
+                ImGui::TableNextColumn();
+                ImGui::Text("Black");
+                ImGui::EndTable();
+            }
+            uint32_t counter = 0;
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8, 8));
+            if (ImGui::BeginTable("Moves", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
+            {
+                for (auto it = moves.begin(); it != moves.end(); it++)
+                {
+                    if (counter % 2 == 0)
+                    {
+                        ImGui::TableNextRow();
+                    }
+                    ImGui::TableNextColumn();
+                    ImGui::Text(it->c_str());
+
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::BeginTooltip();
+                        ImGui::Image(texure_history[counter]);
+                        ImGui::EndTooltip();
+                    }
+                    counter++;
+                }
+                if (new_move)
+                {
+                    ImGui::SetScrollHereY();
+                    new_move = false;
+                }
+                ImGui::EndTable();
+            }
+            ImGui::PopStyleVar();
+            ImGui::EndTabItem();
         }
-        if (new_move)
-        {
-            ImGui::SetScrollHereY();
-            new_move = false;
-        }
-        ImGui::EndTable();
     }
-    ImGui::PopStyleVar();
+    if (ImGui::BeginTabItem("Possible moves"))
+    {
+
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(8, 8));
+        const auto possible_moves = state.get_possible_plies();
+        if (ImGui::BeginTable("Moves", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
+        {
+            for (auto it = possible_moves.begin(); it != possible_moves.end(); it++)
+            {
+                ImGui::TableNextColumn();
+                std::string ply_str = state.get_algebraic_notation(*it);
+                ImGui::Text(ply_str.c_str());
+            }
+            ImGui::EndTable();
+        }
+        ImGui::PopStyleVar();
+        ImGui::EndTabItem();
+    }
 }
 
 void ChessWidget::update()
@@ -396,7 +428,7 @@ void ChessWidget::play_random()
         {
             if (counter == randidx)
             {
-                std::cout << "Played: " << state.get_algebraic_notation(ply) << " (" << ply << ")" << std::endl;
+                //std::cout << "Played: " << state.get_algebraic_notation(ply) << " (" << ply << ")" << std::endl;
                 moves.push_back(state.get_algebraic_notation(ply));
                 new_move = true;
 
@@ -414,7 +446,7 @@ void ChessWidget::play_random()
 
                 render_history();
                 // std::cout << state << std::endl;
-                std::cout << animated.size() << std::endl;
+                //std::cout << animated.size() << std::endl;
             }
             counter++;
         }
@@ -493,7 +525,7 @@ void ChessWidget::mouse_pressed(sf::Vector2i position, sf::Mouse::Button button)
             {
                 selected_piece = state.get_piece(location, color);
                 selected_color = color;
-                std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
+                //std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
                 selected_location = Location(x, y);
                 selected_sprite = sf::Sprite(textures[2 * selected_piece + color]);
                 selected_sprite.scale(tile_size / selected_sprite.getTexture()->getSize().x * 0.7f, tile_size / selected_sprite.getTexture()->getSize().y * 0.7f);
@@ -506,7 +538,6 @@ void ChessWidget::mouse_pressed(sf::Vector2i position, sf::Mouse::Button button)
         {
             if (button == sf::Mouse::Button::Right)
             {
-                std::cout << "delete!" << std::endl;
                 state.set(location, Piece::Empty);
                 reload();
             }
@@ -549,7 +580,7 @@ void ChessWidget::mouse_pressed(sf::Vector2i position, sf::Mouse::Button button)
                     {
                         selected_piece = state.get_piece(location, color);
                         selected_color = color;
-                        std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
+                        //std::cout << to_char(color) << " " << piece_names[selected_piece] << std::endl;
                         selected_location = Location(x, y);
                         selected_sprite = sf::Sprite(textures[2 * selected_piece + color]);
                         selected_sprite.scale(tile_size / selected_sprite.getTexture()->getSize().x * 0.7f, tile_size / selected_sprite.getTexture()->getSize().y * 0.7f);
@@ -592,7 +623,7 @@ void ChessWidget::mouse_released(sf::Vector2i position, sf::Mouse::Button button
                 }
                 render_history();
             }
-            else if(edit)
+            else if (edit)
             {
                 state.set(selected_location, Piece::Empty);
                 state.set(location, selected_piece, selected_color);
@@ -611,7 +642,7 @@ void ChessWidget::keyboard_event(sf::Event::KeyEvent event)
     {
         if (event.code == sf::Keyboard::W)
         {
-            if(edit_color == Color::White)
+            if (edit_color == Color::White)
             {
                 edit_color = Color::Black;
             }
@@ -623,6 +654,11 @@ void ChessWidget::keyboard_event(sf::Event::KeyEvent event)
         else if (event.code == sf::Keyboard::Delete)
         {
             state.reset();
+            reload();
+        }
+        else if (event.code == sf::Keyboard::Enter)
+        {
+            state.reset_start();
             reload();
         }
     }

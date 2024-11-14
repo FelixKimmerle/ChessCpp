@@ -56,6 +56,9 @@ private:
     Mask displayed_bitmap;
     Color bitmap_color;
 
+    bool check;
+    bool check_mate;
+
     void render_history();
 
 public:

@@ -17,10 +17,6 @@ Mask::Mask(Line line, uint8_t position)
     mask <<= (position << 3);
 }
 
-Mask::~Mask()
-{
-}
-
 Mask Mask::operator&(const Mask &other) const
 {
     return mask & other.mask;

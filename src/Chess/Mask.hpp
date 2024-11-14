@@ -76,8 +76,6 @@ public:
     Mask(uint64_t mask = 0);
     Mask(Line line, uint8_t position = 0);
 
-    ~Mask();
-
     Mask operator&(const Mask &other) const;
     Mask operator&=(const Mask &other);
     bool operator==(const Mask &other) const;
@@ -147,6 +145,7 @@ const Mask FILE_F = 0x2020202020202020ull;
 const Mask FILE_G = 0x4040404040404040ull;
 const Mask FILE_H = 0x8080808080808080ull;
 
+
 static const Mask ranks[] = {
     RANK_1,
     RANK_2,
@@ -168,6 +167,8 @@ static const Mask files[] = {
     FILE_G,
     FILE_H,
 };
+
+
 
 
 static const Mask WHITE_SQUARES = 0x55AA55AA55AA55AAull;

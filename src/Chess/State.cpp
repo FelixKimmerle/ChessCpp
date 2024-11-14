@@ -302,6 +302,10 @@ Mask State::calculate_pinned_pieces(Color player)
     while (!kings.is_zero())
     {
         Location location = kings.get_next_location();
+        Mask rank = ranks[location.get_rank()];
+        Mask file = files[location.get_file()];
+
+        
         //Mask bishop_moves = table.get_bishop_attack(occupied_left, occupied_right, 0, location);
         //Mask rook_moves = table.get_rook_attack(occupied, occupied_flipped, 0, location);
         // king_rays |= bishop_moves;
@@ -339,18 +343,39 @@ Mask State::calculate_pinned_pieces(Color player)
     return pinned_pieces;
 }
 
-bool State::check() const
+bool State::is_check() const
 {
-    return false;
+    return (opponent_attack_mask & pieces[turn][KING_POSITION]) != 0;
 }
 
-bool State::check_mate() const
+
+bool State::is_check_mate() const
 {
-    return false;
+    std::unordered_set<Ply> possible_king_plies;
+    calculate_possible_plies_king(possible_king_plies, turn, opponent_attack_mask);
+    std::cout << possible_king_plies.size() << std::endl;
+    for(const auto & ply : possible_king_plies)
+    {
+        std::cout << get_algebraic_notation(ply) << std::endl;
+    }
+    return possible_king_plies.size() == 0;
 }
 
 Mask State::calculate_attack_mask(Color player)
 {
+    Mask occupied = 0;
+
+    for (uint8_t i = 0; i <= PAWN_POSITION; i++)
+    {
+        occupied |= pieces[Black][i] | pieces[White][i];
+    }
+
+    Mask occupied_flipped = occupied.flip_anti_diag();
+
+    Mask occupied_left = occupied.rotate_left_45();
+    Mask occupied_right = occupied.rotate_right_45();
+
+
     Mask attack_mask;
     {
         Mask pawns = pieces[player][PAWN_POSITION];
@@ -587,6 +612,13 @@ std::string State::get_algebraic_notation(Ply ply) const
     }
 
     ss << destination;
+    State copy = *this;
+    copy.execute_ply(ply);
+    if(copy.is_check())
+    {
+        ss << "+";
+    }
+
     return ss.str();
 }
 
@@ -675,6 +707,12 @@ void State::reset()
     turn = Color::White;
     enpasant = 0;
     possible_plies.clear();
+}
+
+void State::reset_start()
+{
+    //reset();
+    *this = State();
 }
 
 Mask State::get_mask(Color color, uint8_t bitmap) const

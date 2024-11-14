@@ -94,11 +94,12 @@ public:
 
     std::string to_fen() const;
     void reset();
+    void reset_start();
     Mask get_mask(Color color, uint8_t bitmap)const;
     Mask calculate_attack_mask(Color player);
     Mask calculate_pinned_pieces(Color player);
-    bool check()const;
-    bool check_mate()const;
+    bool is_check()const;
+    bool is_check_mate()const;
 
 
     friend std::ostream &operator<<(std::ostream &os, const State &board);
